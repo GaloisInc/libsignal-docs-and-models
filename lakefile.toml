@@ -1,0 +1,29 @@
+name = "PQXDH"
+defaultTargets = ["PQXDH", "ToVCVio"]
+lintDriver = "batteries/runLinter"
+lintDriverArgs = ["PQXDH", "ToVCVio"]
+
+[leanOptions]
+pp.unicode.fun = true
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+maxRecDepth = 10000
+
+[[require]]
+name = "VCVio"
+git = "https://github.com/Verified-zkEVM/VCV-io"
+rev = "8f5dc4f2923cc47e39bc6ce21f71563cf7d19193"
+
+[[require]]
+name = "aeneas"
+git = "https://github.com/AeneasVerif/aeneas"
+rev = "45061fa1a5b4bad876f17c03d3a5544d818622e6"
+subDir = "backends/lean"
+
+[[lean_lib]]
+name = "ToVCVio"
+
+[[lean_lib]]
+name = "PQXDH"
