@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - '**/*.lean'
+      - 'scripts/**'
+      - 'lean-toolchain'
+      - 'lakefile.toml'
+      - 'lake-manifest.json'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - '**/*.lean'
+      - 'scripts/**'
+      - 'lean-toolchain'
+      - 'lakefile.toml'
+      - 'lake-manifest.json'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.changes.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Free disk space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h /
+
+      - name: Detect documentation-relevant changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - '**/*.lean'
+              - 'lean-toolchain'
+              - 'lakefile.toml'
+              - 'lake-manifest.json'
+              - 'scripts/**'
+
+      - name: Cache Lake build products
+        id: lake-build-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/build
+          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json', '**/*.lean') }}
+          restore-keys: |
+            lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
+            lake-build-${{ runner.os }}-
+
+      - name: Restore Lake dependency builds
+        id: lake-deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake/packages/*/.lake/build
+            !.lake/packages/mathlib/.lake/build
+          key: lake-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            lake-deps-${{ runner.os }}-
+
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: "false"
+          build: "true"
+          lint: "true"
+          use-mathlib-cache: "true"
+
+      - name: Sorry audit
+        uses: Beneficial-AI-Foundation/veritooling/actions/sorry-audit@v1
+        with:
+          backend: probe
+          annotate-new-sorries: "true"
+          extract-args: "--library PQXDH,ToVCVio"
+
+      - name: Build documentation modules
+        if: steps.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          lake build \
+            PQXDHDocs.Chapters.Spec.Overview \
+            PQXDHDocs.Chapters.MTP.Overview \
+            PQXDHDocs.Chapters.Aeneas.Overview \
+            PQXDHDocs.Visuals.Style
+
+      - name: Generate documentation site
+        if: steps.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          BLUEPRINT_PROGRESS_HISTORY_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/blueprint-progress-history.json
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/render-docs-site.sh
+
+      - name: Validate site output
+        if: steps.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          test -f _out/site/html-multi/index.html
+          test -f _out/site/html-multi/blueprint-progress-history.json
+          chapters=(
+            PQXDH-Specification
+            Message-Transmission-Protocol
+            Aeneas-Extracted-PQXDH
+          )
+          for chapter in "${chapters[@]}"; do
+            test -f "_out/site/html-multi/$chapter/index.html"
+            test -f "_out/site/html-multi/$chapter/Dependency-Graph/index.html"
+            test -f "_out/site/html-multi/$chapter/Blueprint-Summary/index.html"
+          done
+
+      - name: Save Lake dependency builds
+        if: always() && steps.lake-deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .lake/packages/*/.lake/build
+            !.lake/packages/mathlib/.lake/build
+          key: lake-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+
+      - name: Upload Pages artifact
+        if: steps.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _out/site/html-multi
+
+  deploy:
+    name: Deploy Pages
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.outputs.docs == 'true')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,17 @@
+name: Verification Comment
+# Posts the sticky Verification Delta PR comment after CI completes. Logic
+# lives in the veritooling reusable workflow; the workflow_run trigger runs in
+# the base-repo context so it can comment on fork PRs.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  comment:
+    uses: Beneficial-AI-Foundation/veritooling/.github/workflows/verification-comment.yml@v1
+    with:
+      # Comment only on new sorries in our hand-written libraries; ignore
+      # generated/dependency code (PQXDHDocs, VCVio, mathlib, …).
+      include-prefix: "PQXDH,ToVCVio"

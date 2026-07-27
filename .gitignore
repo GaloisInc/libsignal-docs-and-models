@@ -1,5 +1,14 @@
 .lake
+docs/.lake
+docs/blueprint-progress-history.json
+site/
 _out/
 .vscode/
 .DS_Store
 __pycache__/
+
+sorry-manifest.txt
+sorry-manifest-base.txt
+.sorry-delta-section.md
+.verification-delta-comment.md
+.veritooling-Audit.lean

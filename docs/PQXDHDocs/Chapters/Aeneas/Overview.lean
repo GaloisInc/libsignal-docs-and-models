@@ -1,0 +1,26 @@
+import VersoManual
+import VersoBlueprint
+import VersoBlueprint.Commands.Graph
+import VersoBlueprint.Commands.Summary
+import PQXDHDocs.Bibliography
+import PQXDHDocs.Chapters.Aeneas.Defs
+
+open Verso.Genre
+open Verso.Genre.Manual
+open Informal
+
+set_option doc.verso true
+
+#doc (Manual) "Aeneas-Extracted PQXDH" =>
+
+*References:*
+
+- {Informal.citet PQXDHSpec}[]
+
+PQXDH as a UAKE, instantiated with the Aeneas-extracted implementation.
+
+{include 1 PQXDHDocs.Chapters.Aeneas.Defs}
+
+{blueprint_graph}
+
+{blueprint_summary}

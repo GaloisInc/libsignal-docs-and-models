@@ -12,6 +12,11 @@ maxSynthPendingDepth = 3
 maxRecDepth = 10000
 
 [[require]]
+name = "versoBlueprint"
+git = "https://github.com/leanprover/verso-blueprint"
+rev = "56c01283e9b296baca3e83608169d4210c624bf2"
+
+[[require]]
 name = "VCVio"
 git = "https://github.com/Verified-zkEVM/VCV-io"
 rev = "8f5dc4f2923cc47e39bc6ce21f71563cf7d19193"
@@ -27,3 +32,11 @@ name = "ToVCVio"
 
 [[lean_lib]]
 name = "PQXDH"
+
+[[lean_lib]]
+name = "PQXDHDocs"
+srcDir = "docs"
+
+[[lean_exe]]
+name = "pqxdhDocs"
+root = "PQXDHDocsMain"
