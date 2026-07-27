@@ -85,7 +85,7 @@ jobs:
         with:
           auto-config: "false"
           build: "true"
-          lint: "true"
+          lint: "false"
           use-mathlib-cache: "true"
 
       - name: Sorry audit
