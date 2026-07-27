@@ -20,7 +20,7 @@ def DF17 : Verso.Genre.Manual.Bibliography.Citable := .inProceedings
   , authors := #[inlines!"Yevgeniy Dodis", inlines!"Dario Fiore"]
   , year := 2017
   , booktitle := inlines!"Financial Cryptography and Data Security 2017"
-  , url := some "https://eprint.iacr.org/2016/1150" }
+  , url := some "https://eprint.iacr.org/2017/109" }
 
 @[bib "LS17"]
 def LS17 : Verso.Genre.Manual.Bibliography.Citable := .inProceedings
