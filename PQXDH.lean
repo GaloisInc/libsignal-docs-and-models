@@ -1,5 +1,7 @@
 import PQXDH.Aeneas.Extracted.Pqxdh
 import PQXDH.Aeneas.UAKE
+import PQXDH.Aeneas2.Extracted
+import PQXDH.Aeneas2.UAKE
 import PQXDH.HardnessAssumptions.DiffieHellman
 import PQXDH.MTP.Basic
 import PQXDH.MTP.ICCA.Basic
