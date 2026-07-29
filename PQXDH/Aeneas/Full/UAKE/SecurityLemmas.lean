@@ -3,7 +3,7 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import PQXDH.Aeneas.Full.UAKE.Defs
+import PQXDH.Aeneas.Full.UAKE.CommonLemmas
 
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
@@ -78,11 +78,6 @@ def EncapsTotalAll (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
   ∀ (pk : PQPub) (r : Rand),
     ∃ ss ct rest, kem.KeyPublic.encapsulate P.cryptoRngInst pk r = .ok (.Ok (ss, ct), rest)
 
-def EncapsLengthOK (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ (pk : PQPub) (r : Rand) (ss ct : Aeneas.Std.Slice Aeneas.Std.U8) (rest : Rand),
-    kem.KeyPublic.encapsulate P.cryptoRngInst pk r = .ok (.Ok (ss, ct), rest) →
-      (toKey ss).isSome
-
 def ecAgree (kp : ECKeyPair) (pk : ECPub) : ECPub :=
   match libsignal_core.curve.PrivateKey.calculate_agreement kp.private_key pk with
   | .ok (.Ok z) => pubOfSlice z
@@ -108,11 +103,10 @@ def kpOfPair (privEnc : F → ECPriv) (p : ECPub × F) : ECKeyPair where
   public_key := p.1
   private_key := privEnc p.2
 
-def kdfPRFDH [Field F] [AddCommGroup ECPub] [Module F ECPub] [SampleableType F]
-    (gen : ECPub) :
-    PRFScheme F (ECPub × ECPub × Option ECPub × Key) (Key × Key × Key) where
-  keygen := $ᵗ F
-  eval := fun c q => getOk (deriveKeys q.1 q.2.1 (c • gen) q.2.2.1 q.2.2.2)
+def kdfPRFDH (P : Parameters Rand SPK SSK S C Msg IdC IdK) :
+    PRFScheme ECKeyPair (ECPub × ECPub × Option ECPub × Key) (Key × Key × Key) where
+  keygen := P.ecKeygen
+  eval := fun kp q => getOk (deriveKeys q.1 q.2.1 kp.public_key q.2.2.1 q.2.2.2)
 
 def kpOfKem (pq : PQPub × PQPriv) : PQKeyPair where
   public_key := pq.1
@@ -159,8 +153,8 @@ def ECAgreeSpec [Field F] [AddCommGroup ECPub] [Module F ECPub]
 def ECCanonicalSpec : Prop :=
   ∀ pk : ECPub, libsignal_core.curve.PublicKey.is_canonical pk = .ok true
 
-structure KemPairModel (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop where
-  keygen_eq : P.pqKeygen = kpOfKem <$> (pqkem P).keygen
+def PQKeygenSpec (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
+  P.pqKeygen = kpOfKem <$> (pqkem P).keygen
 
 section GroupModelBridge
 
@@ -240,7 +234,7 @@ lemma publish_toSpec
   sorry
 
 lemma initiate_toSpec (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc)
-    (hencTotal : EncapsTotalAll P) (hencLen : EncapsLengthOK P)
+    (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (uk : PQXDH.InitiatorParameters F ECPub SPK Msg)
     (bundle : PreKeyBundle ECPub PQPub S IdC IdK) :
@@ -269,7 +263,7 @@ lemma initiator_init_toSpec [DecidableEq Msg]
 
 lemma initiator_step_toSpec [DecidableEq Msg]
     (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc)
-    (hencTotal : EncapsTotalAll P) (hencLen : EncapsLengthOK P)
+    (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (st : PQXDH.InitiatorParameters F ECPub SPK Msg ⊕
       SessionContext ECPub PQPub Msg Key ⊕ Key)
@@ -287,7 +281,7 @@ lemma initiator_output_toSpec [DecidableEq Msg]
   rcases st with p | ctx | k <;> rfl
 
 lemma recipient_init_toSpec [DecidableEq IdC] [DecidableEq IdK]
-    (hkeygen : ECKeygenSpec P gen privEnc) (hK : KemPairModel P) (hasOPK : Bool)
+    (hkeygen : ECKeygenSpec P gen privEnc) (hK : PQKeygenSpec P) (hasOPK : Bool)
     (tk : PQXDH.RecipientIdentity F ECPub SPK SSK S) :
     (recipient P hasOPK).init (tkOfSpec privEnc tk)
       = Party.InitResult.map (Sum.map (rpOfSpec privEnc) id) <$>
@@ -330,16 +324,16 @@ lemma opensAtMost_toSpec
 
 lemma initiator_sim [DecidableEq Msg]
     (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc)
-    (hencTotal : EncapsTotalAll P) (hencLen : EncapsLengthOK P)
+    (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal) :
     Party.Sim (PQXDH.initiator (specParams P F gen)) (initiator P)
       (ukOfSpec privEnc) (Sum.map (ukOfSpec privEnc) id) where
   init_eq := initiator_init_toSpec P gen privEnc
-  step_eq := initiator_step_toSpec P gen privEnc hkeygen hagree hencTotal hencLen hkdfTotal
+  step_eq := initiator_step_toSpec P gen privEnc hkeygen hagree hencTotal hkdfTotal
   output_eq := initiator_output_toSpec P gen privEnc
 
 lemma recipient_sim [DecidableEq IdC] [DecidableEq IdK]
-    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : KemPairModel P)
+    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : PQKeygenSpec P)
     (hkdfTotal : DeriveKeysTotal) (hasOPK : Bool) :
     Party.Sim (PQXDH.recipient (specParams P F gen) hasOPK) (recipient P hasOPK)
       (tkOfSpec privEnc) (Sum.map (rpOfSpec privEnc) id) where
@@ -350,8 +344,8 @@ lemma recipient_sim [DecidableEq IdC] [DecidableEq IdK]
 lemma exp_toSpec
     [DecidableEq S] [DecidableEq C] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters Rand SPK SSK S C Msg IdC IdK}
-    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : KemPairModel P)
-    (hencTotal : EncapsTotalAll P) (hencLen : EncapsLengthOK P)
+    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : PQKeygenSpec P)
+    (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
     UAKE.Exp A = UAKE.Exp (A.toSpecFull gen privEnc) := by
@@ -360,13 +354,13 @@ lemma exp_toSpec
 lemma advantage_toSpec
     [DecidableEq S] [DecidableEq C] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters Rand SPK SSK S C Msg IdC IdK}
-    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : KemPairModel P)
-    (hencTotal : EncapsTotalAll P) (hencLen : EncapsLengthOK P)
+    (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc) (hcanon : ECCanonicalSpec) (hK : PQKeygenSpec P)
+    (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
     UAKE.advantage A = UAKE.advantage (A.toSpecFull gen privEnc) := by
   unfold UAKE.advantage
-  rw [exp_toSpec gen privEnc hkeygen hagree hcanon hK hencTotal hencLen hkdfTotal A]
+  rw [exp_toSpec gen privEnc hkeygen hagree hcanon hK hencTotal hkdfTotal A]
 
 omit [Field F] [SampleableType F] [AddCommGroup ECPub] [Module F ECPub] in
 lemma kdfPRF_specParams {P : Parameters Rand SPK SSK S C Msg IdC IdK} :
@@ -376,7 +370,7 @@ lemma kdfPRFDH_advantage_toSpec {P : Parameters Rand SPK SSK S C Msg IdC IdK}
     (hkeygen : ECKeygenSpec P gen privEnc)
     (D : PRFScheme.PRFAdversary (ECPub × ECPub × Option ECPub × Key) (Key × Key × Key)) :
     (PQXDH.kdfPRFDH (specParams P F gen)).prfAdvantage D
-      = (kdfPRFDH (F := F) gen).prfAdvantage D := by
+      = (kdfPRFDH P).prfAdvantage D := by
   sorry
 
 lemma nominalDDHExpReal_toSpec (hkeygen : ECKeygenSpec P gen privEnc) (hagree : ECAgreeSpec privEnc)

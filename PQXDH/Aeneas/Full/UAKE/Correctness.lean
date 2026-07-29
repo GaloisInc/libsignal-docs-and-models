@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
+import PQXDH.Aeneas.Full.UAKE.CommonLemmas
 
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
@@ -62,6 +63,34 @@ theorem uakeRecipient_perfectlyCorrect
   subst huk htk
   exact run_support_recipient P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
     hspkSigB hrun
+
+theorem uakeInitiator_perfectlyCorrect_extractedSig
+    [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
+    (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)
+    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8)
+    (msg : Msg) (hasOPK : Bool)
+    (hsigModel : SigModel P encMsg)
+    (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
+    (haead : AEAD.PerfectlyCorrect P.aead)
+    (hdh : AgreeComm P) :
+    UAKE.PerfectlyCorrect (uakeInitiator P msg hasOPK) := by
+  refine uakeInitiator_perfectlyCorrect P msg hasOPK ?_ hkem haead hdh
+  rw [hsigModel.sig_eq]
+  exact extractedSig_perfectlyComplete _ _ _ hsigModel.keygen_valid _
+
+theorem uakeRecipient_perfectlyCorrect_extractedSig
+    [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
+    (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)
+    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8)
+    (msg : Msg) (hasOPK : Bool)
+    (hsigModel : SigModel P encMsg)
+    (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
+    (haead : AEAD.PerfectlyCorrect P.aead)
+    (hdh : AgreeComm P) :
+    UAKE.PerfectlyCorrect (uakeRecipient P msg hasOPK) := by
+  refine uakeRecipient_perfectlyCorrect P msg hasOPK ?_ hkem haead hdh
+  rw [hsigModel.sig_eq]
+  exact extractedSig_perfectlyComplete _ _ _ hsigModel.keygen_valid _
 
 end
 

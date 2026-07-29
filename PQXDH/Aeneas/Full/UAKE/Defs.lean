@@ -169,6 +169,42 @@ def pqkem (P : Parameters Rand SPK SSK S C Msg IdC IdK) :
   decaps := fun sk ct =>
     return (getRes (kem.KeySecret.decapsulate sk ct)).bind toKey
 
+def sigMsgParts (m : Aeneas.Std.Slice Aeneas.Std.U8) :
+    Aeneas.Std.Result (Aeneas.Std.Slice (Aeneas.Std.Slice Aeneas.Std.U8)) :=
+  Aeneas.Std.lift (Aeneas.Std.Array.to_slice (Aeneas.Std.Array.make 1#usize [m]))
+
+def extractedSig (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
+    (coins : ProbComp Rand) (keygen : ProbComp ECKeyPair)
+    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8) :
+    SignatureAlg ProbComp (ECPub ⊕ PQPub) ECPub ECPriv
+      (Aeneas.Std.Slice Aeneas.Std.U8) where
+  keygen := do
+    let kp ← keygen
+    return (kp.public_key, kp.private_key)
+  sign := fun _pk sk m => do
+    let r ← coins
+    match libsignal_core.curve.PrivateKey.calculate_signature cryptoRngInst rngInst sk
+        (encMsg m) r with
+    | .ok (.Ok σ, _) => return σ
+    | _ => return default
+  verify := fun pk m σ =>
+    match sigMsgParts (encMsg m) with
+    | .ok parts =>
+        match libsignal_core.curve.PublicKey.verify_signature_for_multipart_message pk
+            parts σ with
+        | .ok b => return b
+        | _ => return false
+    | _ => return false
+
+def ECKeyPairValid (kp : ECKeyPair) : Prop :=
+  libsignal_core.curve.PrivateKey.public_key kp.private_key = .ok (.Ok kp.public_key)
+
+structure SigModel
+    (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)
+    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8) : Prop where
+  sig_eq : P.sig = extractedSig P.rngInst P.cryptoRngInst P.coins P.ecKeygen encMsg
+  keygen_valid : ∀ kp ∈ support P.ecKeygen, ECKeyPairValid kp
+
 def InitiateTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
   ∀ ip : pqxdh.InitiatorParameters, ∀ r ∈ support P.coins,
     ∃ agr rest, pqxdh.pqxdh_initiate P.rngInst P.cryptoRngInst ip r = .ok (.Ok agr, rest)

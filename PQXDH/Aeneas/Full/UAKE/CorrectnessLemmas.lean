@@ -3,7 +3,7 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import PQXDH.Aeneas.Full.UAKE.Defs
+import PQXDH.Aeneas.Full.UAKE.CommonLemmas
 
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
@@ -30,17 +30,6 @@ body. Unlike `encaps_toKey_isSome` this is a modelling stub, not a knowledge gap
 axiom its evident model `fun x => .ok x` would discharge it outright. -/
 lemma as_ref_eq_ok (ss : Aeneas.Std.Slice Aeneas.Std.U8) :
     Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss = .ok ss := sorry
-
-/- Believed true, not provable here. ML-KEM shared secrets are 32 bytes (FIPS 203), so `toKey`
-never fails on them, but the KEM bottoms out in the opaque axiom
-`kem.kyber1024.…encapsulate` whose type constrains no lengths — libcrux's ML-KEM is not
-extracted. Discharging this needs a length-refined model of that axiom, or extraction of the
-implementation. -/
-lemma encaps_toKey_isSome {R : Type}
-    (inst : rand_core_1.CryptoRng R) (pk : PQPub) (r : R)
-    {ss ct : Aeneas.Std.Slice Aeneas.Std.U8} {rest : R}
-    (h : kem.KeyPublic.encapsulate inst pk r = .ok (.Ok (ss, ct), rest)) :
-    (toKey ss).isSome := sorry
 
 lemma toKey_inj {s₁ s₂ : Aeneas.Std.Slice Aeneas.Std.U8} {k : Key}
     (h₁ : toKey s₁ = some k) (h₂ : toKey s₂ = some k) : s₁ = s₂ := by
