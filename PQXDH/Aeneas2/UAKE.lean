@@ -356,6 +356,241 @@ def uakeRecipient [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
   U := recipient P hasOPK
   T := initiator P
 
+section CorrectnessLemmas
+
+attribute [local simp]
+  core.result.Result.Insts.CoreOpsTry_traitTry.branch
+  Aeneas.Std.core.result.Result.Insts.CoreOpsTry.branch
+  core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual
+  Aeneas.Std.core.result.Result.Insts.CoreOpsTryTraitFromResidualResultInfallible.from_residual
+  identity_key.IdentityKeyPair.impl.private_key
+  identity_key.IdentityKey.impl.public_key
+  identityKeyPairOf identityKeyOf
+
+private lemma from_residual_err_ne {E F T U : Type}
+    (inst : Aeneas.Std.core.convert.From F E) (e : E) (c r : U) (x : T)
+    (h : (do
+           let v ← Aeneas.Std.core.convert.From.from inst e
+           Aeneas.Std.Result.ok (Aeneas.Std.core.result.Result.Err v, c))
+         = Aeneas.Std.Result.ok (Aeneas.Std.core.result.Result.Ok x, r)) : False := by
+  cases hf : Aeneas.Std.core.convert.From.from inst e <;> simp_all
+
+set_option maxHeartbeats 2000000 in
+private lemma pqxdh_accept_eq_of_initiate_eq_ok
+    (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
+    (ikA ekA ikB spkB : ECKeyPair) (opkB : Option ECKeyPair)
+    (pqkp : PQKeyPair) (coins rest : Rand) (ag : InitiatorAgreement)
+    (hdh1 : libsignal_core.curve.PrivateKey.calculate_agreement
+        spkB.private_key ikA.public_key
+      = libsignal_core.curve.PrivateKey.calculate_agreement
+        ikA.private_key spkB.public_key)
+    (hdh2 : libsignal_core.curve.PrivateKey.calculate_agreement
+        ikB.private_key ekA.public_key
+      = libsignal_core.curve.PrivateKey.calculate_agreement
+        ekA.private_key ikB.public_key)
+    (hdh3 : libsignal_core.curve.PrivateKey.calculate_agreement
+        spkB.private_key ekA.public_key
+      = libsignal_core.curve.PrivateKey.calculate_agreement
+        ekA.private_key spkB.public_key)
+    (hdh4 : ∀ opk ∈ opkB,
+      libsignal_core.curve.PrivateKey.calculate_agreement
+        opk.private_key ekA.public_key
+      = libsignal_core.curve.PrivateKey.calculate_agreement
+        ekA.private_key opk.public_key)
+    (hkem : ∀ ss ct rest' ss',
+      kem.KeyPublic.encapsulate cryptoRngInst pqkp.public_key coins
+        = .ok (.Ok (ss, ct), rest') →
+      Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss = .ok ss' →
+      kem.KeySecret.decapsulate pqkp.secret_key ct = .ok (.Ok ss'))
+    (hcanon : libsignal_core.curve.PublicKey.is_canonical ekA.public_key = .ok true)
+    (hI : pqxdh.pqxdh_initiate rngInst cryptoRngInst
+      { our_identity_key_pair := identityKeyPairOf ikA
+        our_ephemeral_key_pair := ekA
+        their_identity_key := identityKeyOf ikB
+        their_signed_pre_key := spkB.public_key
+        their_one_time_pre_key := opkB.map (·.public_key)
+        their_ratchet_key := spkB.public_key
+        their_kyber_pre_key := pqkp.public_key
+        self_session := false } coins = .ok (.Ok ag, rest)) :
+    pqxdh.pqxdh_accept
+      { our_identity_key_pair := identityKeyPairOf ikB
+        our_signed_pre_key_pair := spkB
+        our_one_time_pre_key_pair := opkB
+        our_kyber_pre_key_pair := pqkp
+        their_identity_key := identityKeyOf ikA
+        their_ephemeral_key := ekA.public_key
+        their_kyber_ciphertext := ag.kyber_ciphertext
+        self_session := false } = .ok (.Ok ag.keys) := by
+  simp only [pqxdh.pqxdh_initiate] at hI
+  simp only [pqxdh.pqxdh_accept, hcanon]
+  simp only [identity_key.IdentityKeyPair.impl.private_key,
+    identity_key.IdentityKey.impl.public_key, identityKeyPairOf, identityKeyOf] at hI ⊢
+  cases hmul : 32#usize * 6#usize with
+  | fail e => simp [hmul] at hI
+  | div => simp [hmul] at hI
+  | ok i =>
+  cases hsl : Aeneas.Std.lift (Aeneas.Std.Array.repeat 32#usize 255#u8).to_slice with
+  | fail e => simp [hmul, hsl] at hI
+  | div => simp [hmul, hsl] at hI
+  | ok s =>
+  cases hex1 : Aeneas.Std.alloc.vec.Vec.extend_from_slice Aeneas.Std.core.clone.CloneU8
+      (Aeneas.Std.alloc.vec.Vec.with_capacity Aeneas.Std.U8 i) s with
+  | fail e => simp [hmul, hsl, hex1] at hI
+  | div => simp [hmul, hsl, hex1] at hI
+  | ok secrets1 =>
+  cases hd1 : libsignal_core.curve.PrivateKey.calculate_agreement
+      ikA.private_key spkB.public_key with
+  | fail e => simp [hmul, hsl, hex1, hd1] at hI
+  | div => simp [hmul, hsl, hex1, hd1] at hI
+  | ok cr1 =>
+  cases cr1 with
+  | Err e =>
+      simp [hmul, hsl, hex1, hd1] at hI <;>
+        cases hf : Aeneas.Std.core.convert.From.from
+          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+  | Ok dh1 =>
+  cases hex2 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+      Aeneas.Std.core.clone.CloneU8 secrets1 dh1 with
+  | fail e => simp [hmul, hsl, hex1, hd1, hex2] at hI
+  | div => simp [hmul, hsl, hex1, hd1, hex2] at hI
+  | ok secrets2 =>
+  cases hd2 : libsignal_core.curve.PrivateKey.calculate_agreement
+      ekA.private_key ikB.public_key with
+  | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2] at hI
+  | div => simp [hmul, hsl, hex1, hd1, hex2, hd2] at hI
+  | ok cr2 =>
+  cases cr2 with
+  | Err e =>
+      simp [hmul, hsl, hex1, hd1, hex2, hd2] at hI <;>
+        cases hf : Aeneas.Std.core.convert.From.from
+          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+  | Ok dh2 =>
+  cases hex3 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+      Aeneas.Std.core.clone.CloneU8 secrets2 dh2 with
+  | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3] at hI
+  | div => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3] at hI
+  | ok secrets3 =>
+  cases hd3 : libsignal_core.curve.PrivateKey.calculate_agreement
+      ekA.private_key spkB.public_key with
+  | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3] at hI
+  | div => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3] at hI
+  | ok cr3 =>
+  cases cr3 with
+  | Err e =>
+      simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3] at hI <;>
+        cases hf : Aeneas.Std.core.convert.From.from
+          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+  | Ok dh3 =>
+  cases hex4 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+      Aeneas.Std.core.clone.CloneU8 secrets3 dh3 with
+  | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4] at hI
+  | div => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4] at hI
+  | ok secrets4 =>
+  cases opkB with
+  | none =>
+    cases henc : kem.KeyPublic.encapsulate cryptoRngInst pqkp.public_key coins with
+    | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc] at hI
+    | div => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc] at hI
+    | ok p =>
+      obtain ⟨cr4, csprng1⟩ := p
+      cases cr4 with
+      | Err e =>
+          simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc] at hI
+      | Ok sct =>
+        obtain ⟨ss, ct⟩ := sct
+        cases hasr : Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss with
+        | fail e =>
+            simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr] at hI
+        | div =>
+            simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr] at hI
+        | ok s1 =>
+          cases hex5 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+              Aeneas.Std.core.clone.CloneU8 secrets4 s1 with
+          | fail e =>
+              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5] at hI
+          | div =>
+              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5] at hI
+          | ok secrets5 =>
+            cases hder : pqxdh.HandshakeKeys.derive secrets5.deref with
+            | fail e =>
+                simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5,
+                  hder] at hI
+            | div =>
+                simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5,
+                  hder] at hI
+            | ok hk =>
+              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5,
+                hder] at hI
+              obtain ⟨hag, -⟩ := hI
+              subst hag
+              simp [hmul, hsl, hex1, hex2, hex3, hex4, hex5, hder, hdh1, hdh2, hdh3,
+                hd1, hd2, hd3, hkem ss ct csprng1 s1 henc hasr]
+  | some opk =>
+    cases hd4 : libsignal_core.curve.PrivateKey.calculate_agreement
+        ekA.private_key opk.public_key with
+    | fail e => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4] at hI
+    | div => simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4] at hI
+    | ok cr4 =>
+      cases cr4 with
+      | Err e =>
+          simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4] at hI <;>
+            cases hf : Aeneas.Std.core.convert.From.from
+              error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+      | Ok dh4 =>
+        cases hex5 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+            Aeneas.Std.core.clone.CloneU8 secrets4 dh4 with
+        | fail e =>
+            simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5] at hI
+        | div =>
+            simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5] at hI
+        | ok secrets5 =>
+          cases henc : kem.KeyPublic.encapsulate cryptoRngInst pqkp.public_key coins with
+          | fail e =>
+              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc] at hI
+          | div =>
+              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc] at hI
+          | ok p =>
+            obtain ⟨cr5, csprng1⟩ := p
+            cases cr5 with
+            | Err e =>
+                simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc] at hI
+            | Ok sct =>
+              obtain ⟨ss, ct⟩ := sct
+              cases hasr : Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss with
+              | fail e =>
+                  simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc,
+                    hasr] at hI
+              | div =>
+                  simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc,
+                    hasr] at hI
+              | ok s1 =>
+                cases hex6 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
+                    Aeneas.Std.core.clone.CloneU8 secrets5 s1 with
+                | fail e =>
+                    simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc,
+                      hasr, hex6] at hI
+                | div =>
+                    simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5, henc,
+                      hasr, hex6] at hI
+                | ok secrets6 =>
+                  cases hder : pqxdh.HandshakeKeys.derive secrets6.deref with
+                  | fail e =>
+                      simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5,
+                        henc, hasr, hex6, hder] at hI
+                  | div =>
+                      simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5,
+                        henc, hasr, hex6, hder] at hI
+                  | ok hk =>
+                    simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5,
+                      henc, hasr, hex6, hder] at hI
+                    obtain ⟨hag, -⟩ := hI
+                    subst hag
+                    simp [hmul, hsl, hex1, hex2, hex3, hex4, hex5, hex6, hder, hdh1, hdh2,
+                      hdh3, hdh4 opk rfl, hd1, hd2, hd3, hd4,
+                      hkem ss ct csprng1 s1 henc hasr]
+
+end CorrectnessLemmas
+
 theorem uakeInitiator_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool)

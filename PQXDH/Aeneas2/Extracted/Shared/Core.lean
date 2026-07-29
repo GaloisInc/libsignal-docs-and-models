@@ -40,18 +40,17 @@ axiom
   (T : Type) : Option core.convert.Infallible → Result (Option T)
 
 /-- [core::result::{Try for Result<T, E>}::branch] -/
-@[rust_fun
-  "core::result::{core::ops::try_trait::Try<core::result::Result<@T, @E>>}::branch"]
-axiom core.result.Result.Insts.CoreOpsTry_traitTry.branch
+def core.result.Result.Insts.CoreOpsTry_traitTry.branch
   {T : Type} {E : Type} :
   core.result.Result T E → Result (core.ops.control_flow.ControlFlow
-    (core.result.Result core.convert.Infallible E) T)
+    (core.result.Result core.convert.Infallible E) T) :=
+  Aeneas.Std.core.result.Result.Insts.CoreOpsTry.branch
 
 /-- [core::result::{FromResidual<Result<Infallible, E>> for Result<T, F>}::from_residual] -/
-@[rust_fun
-  "core::result::{core::ops::try_trait::FromResidual<core::result::Result<@T, @F>, core::result::Result<core::convert::Infallible, @E>>}::from_residual"]
-axiom
+def
   core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual
   (T : Type) {E : Type} {F : Type} (convertFromInst : core.convert.From F E) :
   core.result.Result core.convert.Infallible E → Result (core.result.Result T
-    F)
+    F) :=
+  Aeneas.Std.core.result.Result.Insts.CoreOpsTryTraitFromResidualResultInfallible.from_residual
+    T convertFromInst
