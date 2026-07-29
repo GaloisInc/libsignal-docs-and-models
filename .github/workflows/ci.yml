@@ -100,7 +100,6 @@ jobs:
         run: |
           lake build \
             PQXDHDocs.Chapters.Spec.Overview \
-            PQXDHDocs.Chapters.MTP.Overview \
             PQXDHDocs.Chapters.Aeneas.Overview \
             PQXDHDocs.Visuals.Style
 
@@ -118,7 +117,6 @@ jobs:
           test -f _out/site/html-multi/blueprint-progress-history.json
           chapters=(
             PQXDH-Specification
-            Message-Transmission-Protocol
             Aeneas-Extracted-PQXDH
           )
           for chapter in "${chapters[@]}"; do

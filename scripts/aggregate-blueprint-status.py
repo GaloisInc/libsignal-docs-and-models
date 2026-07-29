@@ -35,7 +35,6 @@ CHART_TICK_LABEL_X = -8
 CHART_TICK_LABEL_Y = 30
 CHAPTER_TITLES = {
     "PQXDH-Specification": "PQXDH Protocol Specification",
-    "Message-Transmission-Protocol": "Message-Transmission Protocol",
     "Aeneas-Extracted-PQXDH": "Aeneas-Extracted PQXDH",
 }
 CHAPTER_ORDER = tuple(CHAPTER_TITLES)

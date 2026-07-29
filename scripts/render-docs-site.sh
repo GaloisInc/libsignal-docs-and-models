@@ -198,7 +198,6 @@ move_references_to_bottom() {
 # runner | overview module | output slug | site title | sidebar contents label
 chapters=(
   "docs/PQXDHDocs/Renderers/SpecMain.lean|PQXDHDocs.Chapters.Spec.Overview|PQXDH-Specification|PQXDH Protocol Specification|Specification Contents:"
-  "docs/PQXDHDocs/Renderers/MTPMain.lean|PQXDHDocs.Chapters.MTP.Overview|Message-Transmission-Protocol|Message-Transmission Protocol|MTP Contents:"
   "docs/PQXDHDocs/Renderers/AeneasMain.lean|PQXDHDocs.Chapters.Aeneas.Overview|Aeneas-Extracted-PQXDH|Aeneas-Extracted PQXDH|Aeneas Contents:"
 )
 

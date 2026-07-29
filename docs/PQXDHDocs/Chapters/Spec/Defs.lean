@@ -16,7 +16,7 @@ set_option doc.verso true
 The PQXDH key-agreement protocol modeled as a DF'17-style unilaterally-authenticated key exchange (UAKE).
 :::
 
-The definitions and theorems below are documentation placeholders pending write-up, each marked $`\todo`; the Lean sources they will anchor to already live under the `PQXDH.Spec` and `PQXDH.HardnessAssumptions` namespaces.
+The definitions and theorems below are documentation placeholders pending write-up, each marked $`\todo`; the Lean sources they will anchor to already live under the `PQXDH.Spec` namespace.
 
 :::defTitle "spec_parameters" "PQXDH protocol parameters"
 :::

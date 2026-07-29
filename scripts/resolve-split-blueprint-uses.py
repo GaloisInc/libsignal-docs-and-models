@@ -21,7 +21,6 @@ from pathlib import Path
 MANIFEST_PATH = "-verso-data/blueprint-manifest.json"
 CHAPTER_PREFIXES = {
     "PQXDH-Specification": "Spec",
-    "Message-Transmission-Protocol": "MTP",
     "Aeneas-Extracted-PQXDH": "Aeneas",
 }
 ATOM_BLOCK_RE = re.compile(

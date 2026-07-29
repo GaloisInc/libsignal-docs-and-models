@@ -1,13 +1,7 @@
-import PQXDH.Aeneas.Extracted.Pqxdh
-import PQXDH.Aeneas.UAKE
-import PQXDH.Aeneas2.Extracted
-import PQXDH.Aeneas2.UAKE
-import PQXDH.HardnessAssumptions.DiffieHellman
-import PQXDH.MTP.Basic
-import PQXDH.MTP.ICCA.Basic
-import PQXDH.MTP.ICCA.OfAsymmEncAlg
-import PQXDH.MTP.ICMA
-import PQXDH.MTP.Theorems
+import PQXDH.Aeneas.Simplified.Extracted.Pqxdh
+import PQXDH.Aeneas.Simplified.UAKE
+import PQXDH.Aeneas.Full.Extracted
+import PQXDH.Aeneas.Full.UAKE
 import PQXDH.Spec.Basic
 import PQXDH.Spec.UAKE
 import PQXDH.ToMathlib
