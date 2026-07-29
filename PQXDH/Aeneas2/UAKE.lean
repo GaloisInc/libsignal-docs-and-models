@@ -58,8 +58,6 @@ abbrev PQPriv : Type := kem.Key kem.Secret
 
 abbrev PQKeyPair : Type := kem.KeyPair
 
-abbrev SS : Type := Aeneas.Std.Slice Aeneas.Std.U8
-
 abbrev CT : Type := Aeneas.Std.Slice Aeneas.Std.U8
 
 abbrev Key : Type := Bytes 32#usize
@@ -90,12 +88,19 @@ local instance {T : Type} : Inhabited (kem.Key T) :=
 def toKey (s : Aeneas.Std.Slice Aeneas.Std.U8) : Option Key :=
   if h : s.val.length = (32#usize : Aeneas.Std.Usize).val then some ⟨s.val, h⟩ else none
 
+def identityKeyOf (kp : ECKeyPair) : IdKey := { public_key := kp.public_key }
+
+def identityKeyPairOf (kp : ECKeyPair) : IdKeyPair :=
+  { identity_key := identityKeyOf kp, private_key := kp.private_key }
+
 variable {Rand SPK SSK S C Msg IdC IdK : Type}
 
 structure Parameters (Rand SPK SSK S C Msg IdC IdK : Type) where
   rngInst : rand.rng.Rng Rand
   cryptoRngInst : rand_core_1.CryptoRng Rand
   coins : ProbComp Rand
+  ecKeygen : ProbComp ECKeyPair
+  pqKeygen : ProbComp PQKeyPair
   sig : SignatureAlg ProbComp (ECPub ⊕ PQPub) SPK SSK S
   aead : AEAD.Scheme ProbComp Msg Key (ECPub × ECPub × PQPub) C
   idEC : ECPub → IdC
@@ -131,11 +136,15 @@ def genEC (P : Parameters Rand SPK SSK S C Msg IdC IdK) : ProbComp (Option ECKey
 def genKem (P : Parameters Rand SPK SSK S C Msg IdC IdK) : ProbComp (Option PQKeyPair) :=
   runRaw P (kem.KeyPair.generate P.rngInst P.cryptoRngInst kem.KeyType.Kyber1024)
 
-def initiate (P : Parameters Rand SPK SSK S C Msg IdC IdK)
+def genOPK (P : Parameters Rand SPK SSK S C Msg IdC IdK) (hasOPK : Bool) :
+    ProbComp (Option ECKeyPair) :=
+  if hasOPK then some <$> P.ecKeygen else pure none
+
+def runInitiate (P : Parameters Rand SPK SSK S C Msg IdC IdK)
     (ip : pqxdh.InitiatorParameters) : ProbComp (Option InitiatorAgreement) :=
   runRes P (pqxdh.pqxdh_initiate P.rngInst P.cryptoRngInst ip)
 
-def accept (rp : pqxdh.RecipientParameters) : Option HandshakeKeys :=
+def runAccept (rp : pqxdh.RecipientParameters) : Option HandshakeKeys :=
   getRes (pqxdh.pqxdh_accept rp)
 
 def rootKeyBytes (hk : HandshakeKeys) : Key := hk.root_key.key
@@ -144,14 +153,11 @@ def chainKeyBytes (hk : HandshakeKeys) : Key := hk.chain_key.key
 
 def pqrKeyBytes (hk : HandshakeKeys) : Key := hk.pqr_key
 
-def sessionKey (hk : HandshakeKeys) : Key := rootKeyBytes hk
-
 def pqkem (P : Parameters Rand SPK SSK S C Msg IdC IdK) :
     KEMScheme ProbComp Key PQPub PQPriv CT where
   keygen := do
-    match ← genKem P with
-    | some kp => return (kp.public_key, kp.secret_key)
-    | none => return default
+    let kp ← P.pqKeygen
+    return (kp.public_key, kp.secret_key)
   encaps := fun pk => do
     let r ← P.coins
     match kem.KeyPublic.encapsulate P.cryptoRngInst pk r with
@@ -169,6 +175,16 @@ def InitiateTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
 
 def AcceptTotal : Prop :=
   ∀ rp : pqxdh.RecipientParameters, ∃ hk, pqxdh.pqxdh_accept rp = .ok (.Ok hk)
+
+def AgreeComm (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
+  ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
+    libsignal_core.curve.PrivateKey.calculate_agreement kp₁.private_key kp₂.public_key
+      = libsignal_core.curve.PrivateKey.calculate_agreement kp₂.private_key kp₁.public_key
+
+def AgreeTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
+  ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
+    ∃ z, libsignal_core.curve.PrivateKey.calculate_agreement kp₁.private_key kp₂.public_key
+      = .ok (.Ok z)
 
 structure InitiatorParameters (SPK Msg : Type) where
   ikA : IdKeyPair
@@ -190,52 +206,135 @@ structure RecipientParameters (SPK SSK S : Type) where
   opkB : Option ECKeyPair
   pqpkB : PQKeyPair
 
-def toExtractedInitiator (I : InitiatorParameters SPK Msg) (ekA : ECKeyPair)
-    (spkB rkB : ECPub) (opkB : Option ECPub) (pqpkB : PQPub) :
-    pqxdh.InitiatorParameters where
-  our_identity_key_pair := I.ikA
-  our_ephemeral_key_pair := ekA
-  their_identity_key := I.ikB
-  their_signed_pre_key := spkB
-  their_one_time_pre_key := opkB
-  their_ratchet_key := rkB
-  their_kyber_pre_key := pqpkB
-  self_session := false
-
-def toExtractedRecipient (R : RecipientParameters SPK SSK S) (ikA : IdKey)
-    (ekA : ECPub) (ct : CT) : pqxdh.RecipientParameters where
-  our_identity_key_pair := R.ikB
-  our_signed_pre_key_pair := R.spkB
-  our_one_time_pre_key_pair := R.opkB
-  our_kyber_pre_key_pair := R.pqpkB
-  their_identity_key := ikA
-  their_ephemeral_key := ekA
-  their_kyber_ciphertext := ct
-  self_session := false
-
-def AgreeComm (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop := sorry
-
-def AgreeTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop := sorry
-
-def kdfPRF : PRFScheme Key (ECPub × ECPub × ECPub × Option ECPub) (Key × Key × Key) := sorry
-
 def setup (P : Parameters Rand SPK SSK S C Msg IdC IdK) (msg : Msg) :
-    ProbComp (InitiatorParameters SPK Msg × RecipientIdentity SPK SSK S) := sorry
+    ProbComp (InitiatorParameters SPK Msg × RecipientIdentity SPK SSK S) := do
+  let ikA ← P.ecKeygen
+  let ikB ← P.ecKeygen
+  let sigkB ← P.sig.keygen
+  let spkB ← P.ecKeygen
+  let spkSigB ← P.sig.sign sigkB.1 sigkB.2 (EncodeEC spkB.public_key)
+  return ({ ikA := identityKeyPairOf ikA, ikB := identityKeyOf ikB,
+            sigpkB := sigkB.1, msg := msg },
+    { ikB := identityKeyPairOf ikB, sigkB := sigkB, spkB := spkB, spkSigB := spkSigB })
 
 def publish (P : Parameters Rand SPK SSK S C Msg IdC IdK)
-    (R : RecipientParameters SPK SSK S) : ProbComp Unit := sorry
+    (p : RecipientParameters SPK SSK S) :
+    ProbComp (PreKeyBundle ECPub PQPub S IdC IdK) := do
+  let pqpkSigB ← P.sig.sign p.sigkB.1 p.sigkB.2 (EncodeKEM p.pqpkB.public_key)
+  return { ikB := p.ikB.identity_key.public_key
+           spkB := (p.spkB.public_key, P.idEC p.spkB.public_key)
+           spkSigB := p.spkSigB
+           pqpkB := (p.pqpkB.public_key, P.idKEM p.pqpkB.public_key)
+           pqpkSigB := pqpkSigB
+           opkB := p.opkB.map fun opk => (opk.public_key, P.idEC opk.public_key) }
 
-def confirm [DecidableEq Msg] (P : Parameters Rand SPK SSK S C Msg IdC IdK) :
-    ProbComp Unit := sorry
+def initiate (P : Parameters Rand SPK SSK S C Msg IdC IdK)
+    (p : InitiatorParameters SPK Msg)
+    (bundle : PreKeyBundle ECPub PQPub S IdC IdK) :
+    ProbComp (Option (InitialMessage ECPub CT C IdC IdK ×
+      SessionContext ECPub PQPub Msg Key)) := do
+  if bundle.ikB ≠ p.ikB.public_key then return none
+  let okSPK ← P.sig.verify p.sigpkB (EncodeEC bundle.spkB.1) bundle.spkSigB
+  let okPQPK ← P.sig.verify p.sigpkB (EncodeKEM bundle.pqpkB.1) bundle.pqpkSigB
+  if !(okSPK && okPQPK) then return none
+  let ekA ← P.ecKeygen
+  match ← runInitiate P
+      { our_identity_key_pair := p.ikA
+        our_ephemeral_key_pair := ekA
+        their_identity_key := { public_key := bundle.ikB }
+        their_signed_pre_key := bundle.spkB.1
+        their_one_time_pre_key := bundle.opkB.map Prod.fst
+        their_ratchet_key := bundle.spkB.1
+        their_kyber_pre_key := bundle.pqpkB.1
+        self_session := false } with
+  | some agreement =>
+      let SK := rootKeyBytes agreement.keys
+      let KA := chainKeyBytes agreement.keys
+      let KB := pqrKeyBytes agreement.keys
+      let AD := (p.ikA.identity_key.public_key, bundle.ikB, bundle.pqpkB.1)
+      let ctxt ← P.aead.encrypt KA AD p.msg
+      return some ({ ikA := p.ikA.identity_key.public_key
+                     ekA := ekA.public_key
+                     ct := agreement.kyber_ciphertext
+                     idSPK := bundle.spkB.2
+                     idPQPK := bundle.pqpkB.2
+                     idOPK := bundle.opkB.map Prod.snd
+                     ctxt := ctxt },
+        { sk := SK, kb := KB, ad := AD, msg := p.msg })
+  | none => return none
+
+def accept [DecidableEq IdC] [DecidableEq IdK]
+    (P : Parameters Rand SPK SSK S C Msg IdC IdK)
+    (p : RecipientParameters SPK SSK S)
+    (msg : InitialMessage ECPub CT C IdC IdK) :
+    ProbComp (Option (SessionContext ECPub PQPub Msg Key)) := do
+  if msg.idSPK ≠ P.idEC p.spkB.public_key ∨ msg.idPQPK ≠ P.idKEM p.pqpkB.public_key ∨
+      msg.idOPK ≠ p.opkB.map (fun opk => P.idEC opk.public_key) then return none
+  match runAccept
+      { our_identity_key_pair := p.ikB
+        our_signed_pre_key_pair := p.spkB
+        our_one_time_pre_key_pair := p.opkB
+        our_kyber_pre_key_pair := p.pqpkB
+        their_identity_key := { public_key := msg.ikA }
+        their_ephemeral_key := msg.ekA
+        their_kyber_ciphertext := msg.ct
+        self_session := false } with
+  | some keys =>
+      let AD := (msg.ikA, p.ikB.identity_key.public_key, p.pqpkB.public_key)
+      match P.aead.decrypt (chainKeyBytes keys) AD msg.ctxt with
+      | some m =>
+          return some { sk := rootKeyBytes keys, kb := pqrKeyBytes keys, ad := AD, msg := m }
+      | none => return none
+  | none => return none
+
+def confirm [DecidableEq Msg] (P : Parameters Rand SPK SSK S C Msg IdC IdK)
+    (ctx : SessionContext ECPub PQPub Msg Key) (conf : C) : Option Key :=
+  if P.aead.decrypt ctx.kb ctx.ad conf = some ctx.msg then some ctx.sk
+  else none
 
 def initiator [DecidableEq Msg] (P : Parameters Rand SPK SSK S C Msg IdC IdK) :
     Party ProbComp (InitiatorParameters SPK Msg)
-      (Message ECPub PQPub CT S C IdC IdK) (Option Key) := sorry
+      (Message ECPub PQPub CT S C IdC IdK) (Option Key) where
+  State := InitiatorParameters SPK Msg ⊕ SessionContext ECPub PQPub Msg Key ⊕ Key
+  init := fun p => pure (.waitForMsg (.inl p))
+  step := fun st w => match st, w with
+    | .inl p, .bundle b => do
+        match ← initiate P p b with
+        | some (im, ctx) => pure (.acceptAndSend (.inr (.inl ctx)) (.initial im) false)
+        | none => pure .reject
+    | .inr (.inl ctx), .confirmation conf =>
+        match confirm P ctx conf with
+        | some SK => pure (.complete (.inr (.inr SK)))
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inr (.inr SK) => pure (some (some SK))
+    | _ => pure none
 
 def recipient [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (hasOPK : Bool) :
     Party ProbComp (RecipientIdentity SPK SSK S)
-      (Message ECPub PQPub CT S C IdC IdK) (Option Key) := sorry
+      (Message ECPub PQPub CT S C IdC IdK) (Option Key) where
+  State := RecipientParameters SPK SSK S ⊕ Key
+  init := fun idn => do
+    let opkB ← genOPK P hasOPK
+    let pqpkB ← P.pqKeygen
+    let p : RecipientParameters SPK SSK S :=
+      { ikB := idn.ikB, sigkB := idn.sigkB, spkB := idn.spkB, spkSigB := idn.spkSigB,
+        opkB := opkB, pqpkB := pqpkB }
+    let bundle ← publish P p
+    pure (.speakFirst (.inl p) (.bundle bundle))
+  step := fun st w => match st, w with
+    | .inl p, .initial im => do
+        match ← accept P p im with
+        | some ctx => do
+            let conf ← P.aead.encrypt ctx.kb ctx.ad ctx.msg
+            pure (.acceptAndSend (.inr ctx.sk) (.confirmation conf) true)
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inl _ => pure none
+    | .inr SK => pure (some (some SK))
 
 def uakeInitiator [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool) :
@@ -263,6 +362,7 @@ theorem uakeInitiator_perfectlyCorrect
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead)
+    (hdh : AgreeComm P)
     (hinit : InitiateTotal P)
     (hacc : AcceptTotal) :
     UAKE.PerfectlyCorrect (uakeInitiator P msg hasOPK) := sorry
@@ -273,6 +373,7 @@ theorem uakeRecipient_perfectlyCorrect
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead)
+    (hdh : AgreeComm P)
     (hinit : InitiateTotal P)
     (hacc : AcceptTotal) :
     UAKE.PerfectlyCorrect (uakeRecipient P msg hasOPK) := sorry
