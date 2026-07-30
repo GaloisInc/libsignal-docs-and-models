@@ -23,6 +23,24 @@ lemma encaps_toKey_isSome {R : Type}
     (h : kem.KeyPublic.encapsulate inst pk r = .ok (.Ok (ss, ct), rest)) :
     (toKey ss).isSome := sorry
 
+/- Believed true, not provable here, and the decapsulation-side twin of
+`encaps_toKey_isSome`. ML-KEM shared secrets are 32 bytes (FIPS 203), so `toKey` never fails on
+them, but the KEM bottoms out in the opaque axiom `kem.kyber1024.…decapsulate` whose type
+constrains no lengths — in the Rust, `type SharedSecret = Box<[u8]>` and the length is only
+asserted in tests, never enforced by a type. Discharging this needs a length-refined model of
+that axiom, or extraction of the implementation. -/
+lemma decaps_toKey_isSome (sk : PQPriv) (ct : Aeneas.Std.Slice Aeneas.Std.U8)
+    {ss : Aeneas.Std.Slice Aeneas.Std.U8}
+    (h : kem.KeySecret.decapsulate sk ct = .ok (.Ok ss)) : (toKey ss).isSome := sorry
+
+/- Believed true, not provable as the extraction stands. Aeneas erases `Box<T>` to `T`
+(note this axiom's type is `T → Result T`), so `Box::as_ref` can only be the identity; it is
+an `axiom` rather than a definition because the extraction's external-model file supplies no
+body. Unlike `encaps_toKey_isSome` this is a modelling stub, not a knowledge gap: giving that
+axiom its evident model `fun x => .ok x` would discharge it outright. -/
+lemma as_ref_eq_ok (ss : Aeneas.Std.Slice Aeneas.Std.U8) :
+    Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss = .ok ss := sorry
+
 variable {Rand : Type}
 
 /- Believed true, not provable here: XEd25519 sign-then-verify agreement, i.e. a signature

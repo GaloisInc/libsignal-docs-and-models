@@ -23,14 +23,6 @@ attribute [local simp]
   identity_key.IdentityKey.impl.public_key
   identityKeyPairOf identityKeyOf
 
-/- Believed true, not provable as the extraction stands. Aeneas erases `Box<T>` to `T`
-(note this axiom's type is `T → Result T`), so `Box::as_ref` can only be the identity; it is
-an `axiom` rather than a definition because the extraction's external-model file supplies no
-body. Unlike `encaps_toKey_isSome` this is a modelling stub, not a knowledge gap: giving that
-axiom its evident model `fun x => .ok x` would discharge it outright. -/
-lemma as_ref_eq_ok (ss : Aeneas.Std.Slice Aeneas.Std.U8) :
-    Box.Insts.CoreConvertAsRef.as_ref Aeneas.Std.Global ss = .ok ss := sorry
-
 lemma toKey_inj {s₁ s₂ : Aeneas.Std.Slice Aeneas.Std.U8} {k : Key}
     (h₁ : toKey s₁ = some k) (h₂ : toKey s₂ = some k) : s₁ = s₂ := by
   unfold toKey at h₁ h₂

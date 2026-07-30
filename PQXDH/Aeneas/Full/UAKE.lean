@@ -7,6 +7,7 @@ import PQXDH.Aeneas.Full.UAKE.Defs
 import PQXDH.Aeneas.Full.UAKE.CommonLemmas
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Full.UAKE.Correctness
+import PQXDH.Aeneas.Full.UAKE.SecurityDefs
 import PQXDH.Aeneas.Full.UAKE.SecurityLemmas
 import PQXDH.Aeneas.Full.UAKE.Security
 
