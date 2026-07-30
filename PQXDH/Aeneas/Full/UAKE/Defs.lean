@@ -199,24 +199,6 @@ def extractedSig (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.Cryp
 def ECKeyPairValid (kp : ECKeyPair) : Prop :=
   libsignal_core.curve.PrivateKey.public_key kp.private_key = .ok (.Ok kp.public_key)
 
-structure SigModel
-    (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)
-    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8) : Prop where
-  sig_eq : P.sig = extractedSig P.rngInst P.cryptoRngInst P.coins P.ecKeygen encMsg
-  keygen_valid : ∀ kp ∈ support P.ecKeygen, ECKeyPairValid kp
-
-def InitiateTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ ip : pqxdh.InitiatorParameters, ∀ r ∈ support P.coins,
-    ∃ agr rest, pqxdh.pqxdh_initiate P.rngInst P.cryptoRngInst ip r = .ok (.Ok agr, rest)
-
-def AcceptTotal : Prop :=
-  ∀ rp : pqxdh.RecipientParameters, ∃ hk, pqxdh.pqxdh_accept rp = .ok (.Ok hk)
-
-def AgreeComm (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
-    libsignal_core.curve.PrivateKey.calculate_agreement kp₁.private_key kp₂.public_key
-      = libsignal_core.curve.PrivateKey.calculate_agreement kp₂.private_key kp₁.public_key
-
 def AgreeTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
   ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
     ∃ z, libsignal_core.curve.PrivateKey.calculate_agreement kp₁.private_key kp₂.public_key

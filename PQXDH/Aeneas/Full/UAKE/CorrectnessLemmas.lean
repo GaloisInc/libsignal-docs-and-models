@@ -3,7 +3,7 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import PQXDH.Aeneas.Full.UAKE.CommonLemmas
+import PQXDH.Aeneas.Full.UAKE.CorrectnessDefs
 
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
@@ -210,9 +210,9 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
   | ok cr1 =>
   cases cr1 with
   | Err e =>
-      simp [hmul, hsl, hex1, hd1] at hI <;>
-        cases hf : Aeneas.Std.core.convert.From.from
-          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+      simp [hmul, hsl, hex1, hd1] at hI
+      cases hf : Aeneas.Std.core.convert.From.from
+        error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
   | Ok dh1 =>
   cases hex2 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
       Aeneas.Std.core.clone.CloneU8 secrets1 dh1 with
@@ -226,9 +226,9 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
   | ok cr2 =>
   cases cr2 with
   | Err e =>
-      simp [hmul, hsl, hex1, hd1, hex2, hd2] at hI <;>
-        cases hf : Aeneas.Std.core.convert.From.from
-          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+      simp [hmul, hsl, hex1, hd1, hex2, hd2] at hI
+      cases hf : Aeneas.Std.core.convert.From.from
+        error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
   | Ok dh2 =>
   cases hex3 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
       Aeneas.Std.core.clone.CloneU8 secrets2 dh2 with
@@ -242,9 +242,9 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
   | ok cr3 =>
   cases cr3 with
   | Err e =>
-      simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3] at hI <;>
-        cases hf : Aeneas.Std.core.convert.From.from
-          error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+      simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3] at hI
+      cases hf : Aeneas.Std.core.convert.From.from
+        error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
   | Ok dh3 =>
   cases hex4 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
       Aeneas.Std.core.clone.CloneU8 secrets3 dh3 with
@@ -288,7 +288,7 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
                 hder] at hI
               obtain ⟨hag, -⟩ := hI
               subst hag
-              simp [hmul, hsl, hex1, hex2, hex3, hex4, hex5, hder, hdh1, hdh2, hdh3,
+              simp [hex1, hex2, hex3, hex4, hex5, hder, hdh1, hdh2, hdh3,
                 hd1, hd2, hd3, hkem ss ct csprng1 s1 henc hasr]
   | some opk =>
     cases hd4 : libsignal_core.curve.PrivateKey.calculate_agreement
@@ -298,9 +298,9 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
     | ok cr4 =>
       cases cr4 with
       | Err e =>
-          simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4] at hI <;>
-            cases hf : Aeneas.Std.core.convert.From.from
-              error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
+          simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4] at hI
+          cases hf : Aeneas.Std.core.convert.From.from
+            error.SignalProtocolError.Insts.CoreConvertFromCurveError e <;> simp_all
       | Ok dh4 =>
         cases hex5 : Aeneas.Std.alloc.vec.Vec.extend_from_slice
             Aeneas.Std.core.clone.CloneU8 secrets4 dh4 with
@@ -350,7 +350,7 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
                       henc, hasr, hex6, hder] at hI
                     obtain ⟨hag, -⟩ := hI
                     subst hag
-                    simp [hmul, hsl, hex1, hex2, hex3, hex4, hex5, hex6, hder, hdh1, hdh2,
+                    simp [hex1, hex2, hex3, hex4, hex5, hex6, hder, hdh1, hdh2,
                       hdh3, hdh4 opk rfl, hd1, hd2, hd3, hd4,
                       hkem ss ct csprng1 s1 henc hasr]
 

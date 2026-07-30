@@ -5,6 +5,7 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.Defs
 import PQXDH.Aeneas.Full.UAKE.CommonLemmas
+import PQXDH.Aeneas.Full.UAKE.CorrectnessDefs
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Full.UAKE.Correctness
 import PQXDH.Aeneas.Full.UAKE.SecurityDefs

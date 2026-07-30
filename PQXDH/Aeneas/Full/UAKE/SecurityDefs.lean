@@ -156,6 +156,17 @@ def ECCanonicalSpec : Prop :=
 def PQKeygenSpec (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
   P.pqKeygen = kpOfKem <$> (pqkem P).keygen
 
+structure ECGroupModel {F : Type} [Field F] [SampleableType F]
+    [AddCommGroup ECPub] [Module F ECPub]
+    (P : Parameters Rand SPK SSK S C Msg IdC IdK) (gen : ECPub)
+    (privEnc : F → ECPriv) : Prop where
+  keygen_eq : ECKeygenSpec P gen privEnc
+  agree_eq : ECAgreeSpec privEnc
+  canonical_eq : ECCanonicalSpec
+
+structure KemPairModel (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop where
+  keygen_eq : PQKeygenSpec P
+
 end
 
 end PQXDH.Aeneas.Full
