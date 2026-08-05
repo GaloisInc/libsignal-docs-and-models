@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.SecurityLemmas
+import PQXDH.Spec.UAKE.Security
 
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol

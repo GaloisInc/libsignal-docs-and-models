@@ -5,7 +5,7 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Simplified.Extracted.Pqxdh
 import PQXDH.Spec.Basic
-import PQXDH.Spec.UAKE
+import PQXDH.Spec.UAKE.Defs
 import ToVCVio.CryptoFoundations.AKE.UAKE.Defs
 import PQXDH.AKE.UAKE.Transport
 import ToVCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman

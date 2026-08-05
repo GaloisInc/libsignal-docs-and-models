@@ -3,5 +3,9 @@ import PQXDH.Aeneas.Simplified.UAKE
 import PQXDH.Aeneas.Full.Extracted
 import PQXDH.Aeneas.Full.UAKE
 import PQXDH.Spec.Basic
-import PQXDH.Spec.UAKE
+import PQXDH.Spec.UAKE.Defs
+import PQXDH.Spec.UAKE.CorrectnessLemmas
+import PQXDH.Spec.UAKE.Correctness
+import PQXDH.Spec.UAKE.SecurityLemmas
+import PQXDH.Spec.UAKE.Security
 import PQXDH.ToMathlib
