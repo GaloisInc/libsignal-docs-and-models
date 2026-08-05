@@ -84,9 +84,13 @@ lemma opImpl_transport
       cases hs : e.tSessions[sid]? with
       | none => simp [Env.transport]
       | some t =>
-          simp only [Option.map_some, StateT.run_bind, StateT.run_set,
-            StateT.run_pure, pure_bind, map_pure]
-          exact congrArg pure (Prod.ext rfl (by simp [Env.transport, List.map_set]))
+          simp only [Option.map_some]
+          cases hk : t.key with
+          | none => simp [Env.transport]
+          | some key =>
+              simp only [StateT.run_bind, StateT.run_set,
+                StateT.run_pure, pure_bind, map_pure]
+              exact congrArg pure (Prod.ext rfl (by simp [Env.transport, List.map_set]))
   | openT =>
       simp only [opImpl, StateT.run_bind, StateT.run_monadLift, StateT.run_get,
         StateT.run_set, StateT.run_pure, monadLift_self, bind_assoc, pure_bind,
@@ -151,19 +155,19 @@ lemma opImpl_transport
                 StateT.run_pure, pure_bind, map_pure]
               exact congrArg pure (Prod.ext rfl (by simp [Env.transport]))
 
-variable [MonadLiftT ProbComp m]
+variable (lift : ProbCompLift m)
 
 omit [LawfulMonad m] in
-private lemma run_liftM_lift {σ α : Type} (x : ProbComp α) (s : σ) :
-    (liftM x : StateT σ m α).run s = (do let a ← (liftM x : m α); pure (a, s)) :=
+private lemma run_liftM_lift {σ α : Type} (x : m α) (s : σ) :
+    (liftM x : StateT σ m α).run s = (do let a ← x; pure (a, s)) :=
   rfl
 
 lemma simulateQ_oracleImpl_transport {α : Type}
     (hU : Party.Sim proto₁.U proto₂.U fU σU) (hT : Party.Sim proto₁.T proto₂.T fT σT)
     (tk : TK₁) (oa : OracleComp (unifSpec + oracleSpec K W) α) (e : Env proto₁) :
-    (simulateQ (oracleImpl proto₂ (fT tk)) oa).run (Env.transport σU σT e)
+    (simulateQ (oracleImpl lift proto₂ (fT tk)) oa).run (Env.transport σU σT e)
       = Prod.map id (Env.transport σU σT) <$>
-          (simulateQ (oracleImpl proto₁ tk) oa).run e := by
+          (simulateQ (oracleImpl lift proto₁ tk) oa).run e := by
   induction oa using OracleComp.inductionOn generalizing e with
   | pure x => simp [StateT.run_pure]
   | query_bind t oa ih =>
@@ -185,10 +189,10 @@ lemma simulateQ_oracleImpl_transport {α : Type}
 lemma challengeSession_transport
     (hU : Party.Sim proto₁.U proto₂.U fU σU) (hT : Party.Sim proto₁.T proto₂.T fT σT)
     (A : Adversary proto₂) (uk : UK₁) (tk : TK₁) :
-    challengeSession A (fU uk) (fT tk)
+    challengeSession lift A (fU uk) (fT tk)
       = (fun r => (ChallengeResult.transport r.1,
           (r.2.1, Env.transport σU σT r.2.2.1, fT r.2.2.2))) <$>
-          challengeSession (A.transport fU) uk tk := by
+          challengeSession lift (A.transport fU) uk tk := by
   unfold challengeSession
   simp only [hU.init_eq uk, bind_map_left, map_bind, Adversary.transport]
   refine bind_congr fun u0 => ?_
@@ -198,7 +202,7 @@ lemma challengeSession_transport
     = Env.transport σU σT ⟨(recordOpt ⟨[]⟩ u0.opening 0).2,
         ⟨u0.state, (recordOpt ⟨[]⟩ u0.opening 0).1⟩, false, []⟩ from by
       simp [Env.transport]]
-  rw [simulateQ_oracleImpl_transport hU hT tk]
+  rw [simulateQ_oracleImpl_transport lift hU hT tk]
   simp only [bind_map_left]
   refine bind_congr fun p => ?_
   simp only [Prod.map_fst, Prod.map_snd, id_eq]
@@ -209,18 +213,18 @@ lemma challengeSession_transport
 
 variable [DecidableEq W]
 
-omit [Monad m] [LawfulMonad m] [MonadLiftT ProbComp m] in
+omit [Monad m] [LawfulMonad m] in
 lemma isPingPong_transport (hrounds : proto₂.rounds = proto₁.rounds)
     (cr : ChallengeResult proto₁) :
     isPingPong (ChallengeResult.transport cr : ChallengeResult proto₂)
       = isPingPong cr := by
   simp [isPingPong, ChallengeResult.transport, hrounds]
 
-omit [Monad m] [LawfulMonad m] [MonadLiftT ProbComp m] in
+omit [Monad m] [LawfulMonad m] in
 lemma fullPingPong_transport (hrounds : proto₂.rounds = proto₁.rounds)
     (e : Env proto₁) (cr : ChallengeResult proto₁) :
-    fullPingPong (Env.transport σU σT e) (ChallengeResult.transport cr)
-      = fullPingPong e cr := by
+    fullPingPong (Env.transport σU σT e).tSessions (ChallengeResult.transport cr)
+      = fullPingPong e.tSessions cr := by
   simp [fullPingPong, Env.transport, ChallengeResult.transport, hrounds,
     List.filter_map, Function.comp_def, List.map_map]
 
@@ -229,12 +233,16 @@ lemma finalize_transport
     (hrounds : proto₂.rounds = proto₁.rounds)
     (A : Adversary proto₂) (aSt : A.State) (e : Env proto₁) (tk : TK₁)
     (cr : ChallengeResult proto₁) (b : Bool) (K1 : Option K) :
-    finalize A (aSt, Env.transport σU σT e, fT tk) (ChallengeResult.transport cr) b K1
-      = finalize (A.transport fU) (aSt, e, tk) cr b K1 := by
+    finalize lift A (aSt, Env.transport σU σT e, fT tk) (ChallengeResult.transport cr) b K1
+      = finalize lift (A.transport fU) (aSt, e, tk) cr b K1 := by
   unfold finalize
   have hK0 : (ChallengeResult.transport cr : ChallengeResult proto₂).K0 = cr.K0 := rfl
   simp only [hK0]
-  rw [simulateQ_oracleImpl_transport hU hT tk (A.post aSt (if b then K1 else cr.K0)) e]
+  have hcd : ({ Env.transport σU σT e with challengeDone := true } : Env proto₂)
+      = Env.transport σU σT { e with challengeDone := true } := by
+    simp [Env.transport]
+  rw [hcd, simulateQ_oracleImpl_transport lift hU hT tk
+    (A.post aSt (if b then K1 else cr.K0)) { e with challengeDone := true }]
   simp only [bind_map_left]
   refine bind_congr fun p => ?_
   simp only [Prod.map_fst, Prod.map_snd, id_eq]
@@ -245,18 +253,18 @@ theorem Exp_transport [SampleableType K]
     (hrounds : proto₂.rounds = proto₁.rounds)
     (hsetup : proto₂.setup = Prod.map fU fT <$> proto₁.setup)
     (A : Adversary proto₂) :
-    Exp A = Exp (A.transport (proto₁ := proto₁) fU) := by
+    Exp lift A = Exp lift (A.transport (proto₁ := proto₁) fU) := by
   unfold Exp
   rw [hsetup]
   erw [bind_map_left]
   refine bind_congr fun x => ?_
   obtain ⟨uk, tk⟩ := x
   refine bind_congr fun b => ?_
-  rw [challengeSession_transport hU hT A uk tk]
+  rw [challengeSession_transport lift hU hT A uk tk]
   erw [bind_map_left]
   refine bind_congr fun r => ?_
   simp only [isPingPong_transport (proto₂ := proto₂) hrounds,
-    finalize_transport hU hT hrounds A, ChallengeResult.transport_K0]
+    finalize_transport lift hU hT hrounds A, ChallengeResult.transport_K0]
 
 end Transport
 

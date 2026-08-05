@@ -36,7 +36,7 @@ theorem uakeInitiator_secure_pq_ofGroupModel
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × ECKey × Option ECKey)
         (Key × Key × Key),
       kdfPRF.prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
   rw [advantage_toSpec gen privEnc hM hencTotal hkdfTotal A]
   exact _root_.PQXDH.uakeInitiator_secure_pq (specParams P F gen) msg hasOPK hidKEM
     (A.toSpec gen privEnc) q (opensAtMost_toSpec gen privEnc A hq)
@@ -66,7 +66,7 @@ theorem uakeInitiator_secure_dh_ofGroupModel
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × Option ECKey × SS)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ εsig + q * (εddh + εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := by
   rw [advantage_toSpec gen privEnc hM hencTotal hkdfTotal A]
   exact _root_.PQXDH.uakeInitiator_secure_dh (specParams P F gen) msg hasOPK hidKEM
     (A.toSpec gen privEnc) q (opensAtMost_toSpec gen privEnc A hq)
@@ -98,7 +98,7 @@ theorem uakeInitiator_secure_pq
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × ECKey × Option ECKey)
         (Key × Key × Key),
       kdfPRF.prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
   have hGroupModel : ∃ (F : Type) (_ : Field F) (_ : SampleableType F)
       (_ : AddCommGroup ECKey) (_ : Module F ECKey)
       (gen : ECKey) (privEnc : F → Bytes 32#usize),
@@ -133,7 +133,7 @@ theorem uakeInitiator_secure_dh
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × Option ECKey × SS)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ εsig + q * (εddh + εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := by
   have hGroupModel : ∃ (F : Type) (_ : Field F) (_ : SampleableType F)
       (_ : AddCommGroup ECKey) (_ : Module F ECKey)
       (gen : ECKey) (privEnc : F → Bytes 32#usize),

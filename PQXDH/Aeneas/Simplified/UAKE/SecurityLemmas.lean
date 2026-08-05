@@ -432,12 +432,12 @@ lemma exp_toSpec
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.Exp A = UAKE.Exp (A.toSpec gen privEnc) := by
+    UAKE.Exp ProbCompRuntime.probComp.toProbCompLift A = UAKE.Exp ProbCompRuntime.probComp.toProbCompLift (A.toSpec gen privEnc) := by
   have hsetup : (uakeInitiator P msg hasOPK).setup
       = Prod.map (ukOfSpec privEnc) (tkOfSpec privEnc) <$>
         (_root_.PQXDH.uakeInitiator (specParams P F gen) msg hasOPK).setup :=
     setup_toSpec P gen privEnc hM msg
-  exact (UAKE.Exp_transport
+  exact (UAKE.Exp_transport ProbCompRuntime.probComp.toProbCompLift
     (proto₁ := _root_.PQXDH.uakeInitiator (specParams P F gen) msg hasOPK)
     (proto₂ := uakeInitiator P msg hasOPK)
     (initiator_sim P gen privEnc hM hencTotal hkdfTotal)
@@ -449,7 +449,7 @@ lemma advantage_toSpec
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.advantage A = UAKE.advantage (A.toSpec gen privEnc) := by
+    UAKE.advantage ProbCompRuntime.probComp A = UAKE.advantage ProbCompRuntime.probComp (A.toSpec gen privEnc) := by
   unfold UAKE.advantage
   rw [exp_toSpec gen privEnc hM hencTotal hkdfTotal A]
 

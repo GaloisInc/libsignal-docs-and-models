@@ -5,6 +5,7 @@ Authors: Ben Hamlin
 -/
 import ToVCVio.CryptoFoundations.AKE.UAKE.Party
 import ToVCVio.CryptoFoundations.AKE.UAKE.Transcript
+import VCVio.OracleComp.ProbCompLift
 
 /-!
 # UAKE Core Definitions
@@ -16,34 +17,30 @@ unkeyed party U. At the end of the protocol, both parties output a key, which
 is guaranteed to be indistinguishable from random, and T is authenticated to U
 (but not vice-versa).
 
+NOTE: The UAKE security game assumes that a scheme is well-formed: namely that
+when run honestly, it transfers exactly `Scheme.rounds` messages, that both
+parties produce outputs only once the protocol is complete, and that party T
+speaks last. We capture the round-count and output constraints via the
+`Scheme.WellFormed` predicate, but not the T-speaks-last convention.
+
 Model simplifications
-* **Revealing unfinished sessions:** DF'17 only allows the reveal query after
-  T's last message. We accept reveal queries at any time, but a reveal before
-  completion returns none (the session key is recorded only at completion)
-  while still marking the session revealed for the full-ping-pong check. This
-  penalizes only the adversary, and is WLOG because an early reveal returns no
-  information: any adversary making one has an equivalent adversary that defers
-  it.
 * **Rejected protocol messages:** DF'17 does not talk about what happens when a
   protocol message is rejected, but it seems necessary to model this in real
   protocols. We allow protocol messages to be rejected, in which case we a)
   drop the message from the transcript and b) continue the session. Other
-  choices would be to record the message and halt the session (record and
-  continue is degenerate, since an adversary could avoid ping-pong by injecting
-  a garbage message), however allowing the adversary to retry is the
-  alternative that gives the adversary the most power, so we choose that option
-  here.
+  choices would be to record the message and either halt the session (which
+  prevents the adversary from retrying) or continue (allowing the adversary to
+  win by injecting a rejected dummy message that prevents transcript matching).
 * **WLOG protocol assumptions:** DF'17 assumes (explicitly) that T speaks last.
-  We do not enforce this in our model, nor do we enforce that a protocol has
-  the stated number of rounds. Moreover, we do not enforce that U outputs K0
-  only at completion, which DF'17 (implicitly) assumes. Such ill-formed
-  protocols will be vacuously insecure (if they are correct), because the
-  ping-pong predicate will not fire on an honest relay, allowing the trivial
-  adversary to win.
-* **No 1-round protocols:** Our model can represent only ≥2-round protocols, since a
-  party's init function has no variant to indicate that it is done at that
-  stage. This is fine for UAKE, since such protocols (where only T contributes
-  to the final key) are trivially insecure (if they are correct).
+  We do not enforce this in our model. However, since the ping-pong predicate
+  depends on the parity of `Scheme.rounds` to determine who should speak first,
+  a protocol with a correct value of `rounds` (ensured by `Scheme.WellFormed`)
+  where T does *not* speak last is trivially insecure (assuming U ever accepts
+  in an honest run).
+* **No 1-round protocols:** Our model can represent only ≥2-round protocols,
+  since a party's init function has no variant to indicate that it is done at
+  that stage. However, note that DF'17 also do not consider UAKE protocols with
+  fewer than 2 rounds.
 -/
 
 open OracleSpec OracleComp
@@ -55,9 +52,21 @@ variable {K UK TK W : Type} {m : Type → Type}
 /-- A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party
   is T; the unkeyed (unauthenticated) party is U. -/
 structure Scheme (m : Type → Type) (K UK TK W : Type) where
+  /-- The total number of protocol messages sent (not round trips) in an honest
+    execution of the protocol, which we assume to be fixed for a given
+    protocol. This is not enforced structurally but is captured by the
+    `Scheme.WellFormed` predicate below. We use this field in conjunction with
+    the "T speaks last" convention of DF'17 to determine the first speaker in
+    the ping-pong predicates used in the security game. -/
   rounds : ℕ
+  /-- Create the initial key material used by U and T. In the security game,
+    this is called just once by the challenger (as opposed to T's init
+    function, which is called each time a new party instance is spun up by the
+    adversary), so the parameters it creates are long term and global. -/
   setup : m (UK × TK)
+  /-- Unkeyed (unauthenticated) party -/
   U : Party m UK W (Option K)
+  /-- Keyed (authenticated) party -/
   T : Party m TK W (Option K)
 
 /-- The UAKE correctness experiment (Def. 7). The parties' keys are sampled
@@ -66,12 +75,25 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
   either party outputs ⊥). -/
 def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
   let (uk, tk) ← proto.setup
-  let (uOut, tOut) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
+  let (uOut, tOut, _) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
   return decide (uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join)
 
-def PerfectlyCorrect [DecidableEq K] [Monad m] [MonadLiftT m SPMF]
-    (proto : Scheme m K UK TK W) : Prop :=
-  Pr[= true | CorrectExp proto] = 1
+/-- True if the correctness experiment always returns true. -/
+def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
+    (runtime : ProbCompRuntime m) : Prop :=
+  Pr[= true | runtime.evalDist (CorrectExp proto)] = 1
+
+/-- True if
+  1. both parties output iff the protocol run is complete, and
+  2. an honest run of the protocol transfers exactly `rounds` messages.
+
+  This does *not* enforce the WLOG T-speaks-last convention from DF'17. -/
+def Scheme.WellFormed [Monad m] [MonadLiftT m SetM] (proto : Scheme m K UK TK W) : Prop :=
+  proto.U.OutputsOnlyAtCompletion ∧ proto.T.OutputsOnlyAtCompletion ∧
+    ∀ uk tk, (uk, tk) ∈ support proto.setup →
+      ∀ uOut tOut ms, (uOut, tOut, ms) ∈
+          support (proto.U.runHonest proto.T uk tk (proto.rounds + 1)) →
+        ms.length = proto.rounds
 
 /-- The state of a single copy of the T oracle state in the UAKE security
   experiment. -/
@@ -81,11 +103,13 @@ structure TSession (proto : Scheme m K UK TK W) where
   /-- The transcript for this session -/
   transcript : Transcript W
   /-- The final key output by T for this session:
-    * none: Session has not yet completed
+    * none: Session has not yet completed, assuming a well-formed party
+      who satisfies `Party.OutputsOnlyAtCompletion`
     * some none: Session completed with T outputing ⊥
     * some (some k): Session completed with T outputing k -/
   key : Option (Option K)
-  /-- Whether the adversary has called reveal on this session -/
+  /-- Whether the key for this session has been revealed to the adversary
+    through a reveal query -/
   revealed : Bool
 
 /-- Challenge environment for the UAKE security experiment -/
@@ -107,7 +131,8 @@ inductive Op (W : Type) where
   /-- Increment an existing session with a given message. Returns the next
     protocol message. -/
   | stepT : ℕ → W → Op W
-  /-- Reveal the key for this session -/
+  /-- Reveal the key for this session. This is a no-op until the session is
+    complete. -/
   | revealT : ℕ → Op W
   /-- Increment the challenge session (created up front) -/
   | stepChallenge : W → Op W
@@ -159,8 +184,11 @@ def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
       match env.tSessions[sid]? with
       | none => pure none
       | some t =>
-        set { env with tSessions := env.tSessions.set sid { t with revealed := true } }
-        pure t.key.join
+        match t.key with
+        | none => pure none
+        | some key =>
+          set { env with tSessions := env.tSessions.set sid { t with revealed := true } }
+          pure key
   | .stepChallenge w => do
       let env ← get
       if env.challengeDone then pure (.inr ())
@@ -180,10 +208,11 @@ def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
 /-- Full oracle for the UAKE experiment. `unifSpec` queries (the adversary's
   coin flips) are forwarded to the ambient monad; the remaining queries are
   handled by `opImpl`. -/
-def oracleImpl [Monad m] [MonadLiftT ProbComp m] (proto : Scheme m K UK TK W) (tk : TK) :
+def oracleImpl [Monad m] (lift : ProbCompLift m) (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (unifSpec + oracleSpec K W) (StateT (Env proto) m) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget (StateT (Env proto) m)
-    + opImpl proto tk
+  let unifImpl : QueryImpl unifSpec (StateT (Env proto) m) := fun q =>
+    liftM (lift.liftProbComp ((HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) q))
+  unifImpl + opImpl proto tk
 
 /-- An adversary in the UAKE security game -/
 structure Adversary (proto : Scheme m K UK TK W) where
@@ -196,13 +225,13 @@ structure ChallengeResult (proto : Scheme m K UK TK W) where
   challengeTr : Transcript W
   oracleTrs : List (Transcript W)
 
-def challengeSession [Monad m] [MonadLiftT ProbComp m]
+def challengeSession [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) (uk : UK) (tk : TK) :
     m (ChallengeResult proto × (A.State × Env proto × TK)) := do
-  let u0 ← (proto.U.init uk : m _)
+  let u0 ← proto.U.init uk
   let (tr0, c0) := recordOpt ⟨[]⟩ u0.opening 0
   let init : Env proto := ⟨c0, ⟨u0.state, tr0⟩, false, []⟩
-  let (st, env) ← (simulateQ (oracleImpl proto tk) (A.challenge uk u0.opening)).run init
+  let (st, env) ← (simulateQ (oracleImpl lift proto tk) (A.challenge uk u0.opening)).run init
   let k0 ← (proto.U.output env.challenge.state : m _)
   pure (⟨k0.join, env.challenge.transcript, env.tSessions.map (·.transcript)⟩,
     (st, env, tk))
@@ -213,40 +242,56 @@ def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1) cr.oracleTrs cr.challengeTr
 
-/-- True if the challenge transcript is ping-pong and the adversary called
-   reveal on the session. -/
+/-- True if the challenge transcript is ping-pong and a session whose transcript
+  matches has been revealed to the adversary through a reveal query. -/
 def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
-    (env : Env proto) (cr : ChallengeResult proto) : Bool :=
+    (tSessions : List (TSession proto)) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
-    ((env.tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
+    ((tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
-def finalize [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+/-- Final stage in the security experiment:
+  1. Pick between `Kb = K1` (if `b = true`) or `Kb = K0` (otherwise)
+  2. Finalize the challenge oracle so the adversary can't continue the
+     challenge session by setting `env.challengeDone = true`
+  3. Give the adversary Kb (and continued oracle access to copies of T) and let
+     it make a guess b'
+  4. Declare the adversary a winner if b' = b and the challenge session is not
+     full ping-pong (in which case it wins w.p. 1/2) -/
+def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
     m Bool := do
   let (aSt, env, tk) := st
   let Kb := if b then K1 else cr.K0
-  let (b', env') ← (simulateQ (oracleImpl proto tk) (A.post aSt Kb)).run env
-  if fullPingPong env' cr then liftM ($ᵗ Bool) else pure (b' == b)
+  let env := { env with challengeDone := true }
+  let (b', env') ← (simulateQ (oracleImpl lift proto tk) (A.post aSt Kb)).run env
+  if fullPingPong env'.tSessions cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
 
-/-- The security experiment from Sec. 3 of DF'17 -/
-def Exp [SampleableType K] [DecidableEq W] [Monad m] [MonadLiftT ProbComp m]
+/-- The security experiment from Sec. 3 of DF'17:
+  1. Run setup
+  2. Choose a uniform challenge bit `b`
+  3. Run A with oracle access to copies of T and the challenge session
+  4. Declare the adversary a winner if it did *not* relay the challenge session
+     and the challenge key is not ⊥
+  5. Run finalize, either with `K0 = K1 = ⊥` if the challenge key was ⊥, or on
+     the challenge key K0 and a uniformly chosen K1 -/
+def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) : m Bool := do
   let (uk, tk) ← proto.setup
-  let b ← ($ᵗ Bool : ProbComp Bool)
-  let (cr, st) ← challengeSession A uk tk
+  let b ← lift.liftProbComp ($ᵗ Bool)
+  let (cr, st) ← challengeSession lift A uk tk
   if cr.K0.isNone then
     let K1 := none
-    finalize A st cr b K1
+    finalize lift A st cr b K1
   else if !isPingPong cr then
     return true
   else
-    let K1 ← some <$> ($ᵗ K : ProbComp K)
-    finalize A st cr b K1
+    let K1 ← some <$> lift.liftProbComp ($ᵗ K)
+    finalize lift A st cr b K1
 
 noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
-    [MonadLiftT ProbComp m] [MonadLiftT m SPMF] {proto : Scheme m K UK TK W}
+    {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
-  |(Pr[= true | Exp A]).toReal - 1 / 2|
+  |(Pr[= true | runtime.evalDist (Exp runtime.toProbCompLift A)]).toReal - 1 / 2|
 
 end AKE.UAKE

@@ -619,12 +619,12 @@ lemma exp_toSpec
     (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.Exp A = UAKE.Exp (A.toSpecFull gen privEnc) := by
+    UAKE.Exp ProbCompRuntime.probComp.toProbCompLift A = UAKE.Exp ProbCompRuntime.probComp.toProbCompLift (A.toSpecFull gen privEnc) := by
   have hsetup : (uakeInitiator P msg hasOPK).setup
       = Prod.map (ukOfSpec privEnc) (tkOfSpec privEnc) <$>
         (PQXDH.uakeInitiator (specParams P F gen) msg hasOPK).setup :=
     setup_toSpec P gen privEnc hkeygen msg
-  exact (UAKE.Exp_transport
+  exact (UAKE.Exp_transport ProbCompRuntime.probComp.toProbCompLift
     (proto₁ := PQXDH.uakeInitiator (specParams P F gen) msg hasOPK)
     (proto₂ := uakeInitiator P msg hasOPK)
     (initiator_sim P gen privEnc hkeygen hagree hencTotal hkdfTotal)
@@ -637,7 +637,7 @@ lemma advantage_toSpec
     (hencTotal : EncapsTotalAll P)
     (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.advantage A = UAKE.advantage (A.toSpecFull gen privEnc) := by
+    UAKE.advantage ProbCompRuntime.probComp A = UAKE.advantage ProbCompRuntime.probComp (A.toSpecFull gen privEnc) := by
   unfold UAKE.advantage
   rw [exp_toSpec gen privEnc hkeygen hagree hcanon hK hencTotal hkdfTotal A]
 

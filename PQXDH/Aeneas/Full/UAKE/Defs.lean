@@ -7,7 +7,7 @@ import PQXDH.Aeneas.Full.Extracted.Protocol
 import PQXDH.Spec.Basic
 import PQXDH.Spec.UAKE
 import ToVCVio.CryptoFoundations.AKE.UAKE.Defs
-import ToVCVio.CryptoFoundations.AKE.UAKE.Transport
+import PQXDH.AKE.UAKE.Transport
 import ToVCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!

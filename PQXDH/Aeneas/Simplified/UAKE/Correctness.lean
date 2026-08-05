@@ -20,13 +20,15 @@ theorem uakeInitiator_perfectlyCorrect
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead)
     (hdh : AgreeComm P) :
-    UAKE.PerfectlyCorrect (uakeInitiator P msg hasOPK) := by
+    UAKE.PerfectlyCorrect (uakeInitiator P msg hasOPK) ProbCompRuntime.probComp := by
+  unfold UAKE.PerfectlyCorrect
+  rw [probOutput_probComp_evalDist]
   refine probOutput_eq_one_of_support_subset_singleton ?_ ?_
   · exact probFailure_of_liftM_PMF _
   intro b hb
   simp only [UAKE.CorrectExp, uakeInitiator, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff, Prod.exists] at hb
-  obtain ⟨uk, tk, hsetup, uOut, tOut, hrun, rfl⟩ := hb
+  obtain ⟨uk, tk, hsetup, uOut, tOut, ms, hrun, rfl⟩ := hb
   suffices h : uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join by
     simpa using h
   simp only [setup, mem_support_bind_iff,
@@ -43,13 +45,15 @@ theorem uakeRecipient_perfectlyCorrect
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead)
     (hdh : AgreeComm P) :
-    UAKE.PerfectlyCorrect (uakeRecipient P msg hasOPK) := by
+    UAKE.PerfectlyCorrect (uakeRecipient P msg hasOPK) ProbCompRuntime.probComp := by
+  unfold UAKE.PerfectlyCorrect
+  rw [probOutput_probComp_evalDist]
   refine probOutput_eq_one_of_support_subset_singleton ?_ ?_
   · exact probFailure_of_liftM_PMF _
   intro b hb
   simp only [UAKE.CorrectExp, uakeRecipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff, Prod.exists] at hb
-  obtain ⟨uk, tk, hsetup, uOut, tOut, hrun, rfl⟩ := hb
+  obtain ⟨uk, tk, hsetup, uOut, tOut, ms, hrun, rfl⟩ := hb
   suffices h : uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join by
     simpa using h
   simp only [setup, support_map, Set.mem_image, mem_support_bind_iff,

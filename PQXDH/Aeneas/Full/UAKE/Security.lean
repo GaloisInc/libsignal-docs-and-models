@@ -37,7 +37,7 @@ theorem uakeInitiator_secure_pq_ofGroupModel
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × ECPub × Option ECPub)
         (Key × Key × Key),
       kdfPRF.prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
   rw [advantage_toSpec gen privEnc hM.keygen_eq hM.agree_eq hM.canonical_eq hK.keygen_eq
     hencTotal hkdfTotal A]
   exact PQXDH.uakeInitiator_secure_pq (specParams P F gen) msg hasOPK hidKEM
@@ -68,7 +68,7 @@ theorem uakeInitiator_secure_dh_ofGroupModel
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × Option ECPub × Key)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ εsig + q * (εddh + εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := by
   rw [advantage_toSpec gen privEnc hM.keygen_eq hM.agree_eq hM.canonical_eq hK.keygen_eq
     hencTotal hkdfTotal A]
   exact PQXDH.uakeInitiator_secure_dh (specParams P F gen) msg hasOPK hidKEM
@@ -102,7 +102,7 @@ theorem uakeInitiator_secure_pq
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × ECPub × Option ECPub)
         (Key × Key × Key),
       kdfPRF.prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
   have hGroupModel : ∃ (F : Type) (_ : Field F) (_ : SampleableType F)
       (_ : AddCommGroup ECPub) (_ : Module F ECPub)
       (gen : ECPub) (privEnc : F → ECPriv),
@@ -134,7 +134,7 @@ theorem uakeInitiator_secure_dh
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × Option ECPub × Key)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
-    UAKE.advantage A ≤ εsig + q * (εddh + εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := by
   have hGroupModel : ∃ (F : Type) (_ : Field F) (_ : SampleableType F)
       (_ : AddCommGroup ECPub) (_ : Module F ECPub)
       (gen : ECPub) (privEnc : F → ECPriv),
