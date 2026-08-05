@@ -32,7 +32,16 @@ The descriptions below are documentation placeholders pending write-up, each mar
 ::::definition "aeneas_simplified_model" (parent := "aeneas") (lean := "PQXDH.Aeneas.Simplified.uakeInitiator")
 $`\todo`
 
-{usesLabel}`uses` {uses "spec_uake"}[]
+{usesLabel}`uses` {uses "spec_uake"}[] · {uses "uake_scheme"}[]
+::::
+
+:::defTitle "aeneas_simplified_recipient" "Simplified extraction recipient as a UAKE"
+:::
+
+::::definition "aeneas_simplified_recipient" (parent := "aeneas") (lean := "PQXDH.Aeneas.Simplified.uakeRecipient")
+$`\todo`
+
+{usesLabel}`uses` {uses "spec_uake_recipient"}[] · {uses "uake_scheme"}[]
 ::::
 
 :::defTitle "aeneas_simplified_correctness" "Correctness of the simplified extraction"
@@ -59,7 +68,16 @@ $`\todo`
 ::::definition "aeneas_full_model" (parent := "aeneas") (lean := "PQXDH.Aeneas.Full.uakeInitiator")
 $`\todo`
 
-{usesLabel}`uses` {uses "spec_uake"}[]
+{usesLabel}`uses` {uses "spec_uake"}[] · {uses "uake_scheme"}[]
+::::
+
+:::defTitle "aeneas_full_recipient" "Production extraction recipient as a UAKE"
+:::
+
+::::definition "aeneas_full_recipient" (parent := "aeneas") (lean := "PQXDH.Aeneas.Full.uakeRecipient")
+$`\todo`
+
+{usesLabel}`uses` {uses "spec_uake_recipient"}[] · {uses "uake_scheme"}[]
 ::::
 
 :::defTitle "aeneas_full_assumptions" "Assumptions about the production extraction"
