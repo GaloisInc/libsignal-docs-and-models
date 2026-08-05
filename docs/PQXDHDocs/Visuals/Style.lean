@@ -25,11 +25,6 @@ def smDocsCss : String := r#"
 /* Main content column width (centred). Tuned for oracle grids + Lean anchors. */
 :root { --verso-content-max-width: calc(74rem + 2cm); }
 
-/* Hide the blueprint panel's own collapsible code box: we already show the
-   full source via `anchor` blocks or external-code pills (see `smDocsJs`). */
-.bp_code_panel_wrapper { display: none !important; }
-
-
 /* Clearer Lean syntax highlighting palette (GitHub-light style) */
 .hl.lean .keyword { color: #cf222e; }
 .hl.lean .const   { color: #6639ba; }
