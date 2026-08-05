@@ -36,7 +36,7 @@ theorem uakeInitiator_perfectlyCorrect
   obtain ⟨ikA, hikA, ikB, hikB, sigkB, hsigkB, spkB, hspkB, spkSigB, hspkSigB, huk, htk⟩ := hsetup
   subst huk htk
   exact run_support_initiator P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
-    hspkSigB hrun
+    hspkSigB (Party.mem_support_runHonestPair hrun)
 
 theorem uakeRecipient_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
@@ -64,7 +64,7 @@ theorem uakeRecipient_perfectlyCorrect
   obtain ⟨huk, htk⟩ := hswap
   subst huk htk
   exact run_support_recipient P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
-    hspkSigB hrun
+    hspkSigB (Party.mem_support_runHonestPair hrun)
 
 end
 
