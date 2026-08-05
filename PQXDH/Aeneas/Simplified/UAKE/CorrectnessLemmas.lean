@@ -329,19 +329,20 @@ lemma run_support_initiator
     (hsigkB : sigkB ∈ support P.sig.keygen)
     (hspkB : spkB ∈ support P.ecKeygen)
     (hspkSigB : spkSigB ∈ support (P.sig.sign sigkB.1 sigkB.2 (EncodeEC spkB.public_key)))
-    {uOut tOut : Option (Option Key)}
-    (hrun : (uOut, tOut) ∈ support (Party.runHonestPair (initiator P) (recipient P hasOPK)
+    {uOut tOut : Option (Option Key)} {ms : List (Message ECKey PQPK CT S C IdC IdK)}
+    (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (initiator P) (recipient P hasOPK)
       ⟨ikA, ikB.public_key, sigkB.1, msg⟩ ⟨ikB, sigkB, spkB, spkSigB⟩ (3 + 1))) :
     uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join := by
-  simp only [Party.runHonestPair, initiator, recipient, mem_support_bind_iff, support_pure,
+  simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff] at hrun
   obtain ⟨pInit, rfl, qInit, ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, hrun⟩ := hrun
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.InitResult.opening, Party.InitResult.state, mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
+    mem_support_bind_iff] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
-  simp only [Party.runHonestPairLoop, mem_support_bind_iff] at hy
+  simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
   rcases mem_support_initiate P rfl
       (fun b hb => verify_eq_true_of_perfectlyComplete P hsig hsigkB _ hspkSigB hb)
@@ -352,8 +353,7 @@ lemma run_support_initiator
     simp only [support_pure, Set.mem_singleton_iff] at hy
     subst hy
     simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-    obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-    simp
+    simp_all
   · simp only [support_pure, Set.mem_singleton_iff] at hr
     subst hr
     dsimp only at hctxt hy
@@ -390,8 +390,7 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
       | false =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -401,8 +400,7 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
     | fail e =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -412,8 +410,7 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
     | div =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -423,8 +420,7 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
 
 lemma run_support_recipient
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
@@ -440,19 +436,20 @@ lemma run_support_recipient
     (hsigkB : sigkB ∈ support P.sig.keygen)
     (hspkB : spkB ∈ support P.ecKeygen)
     (hspkSigB : spkSigB ∈ support (P.sig.sign sigkB.1 sigkB.2 (EncodeEC spkB.public_key)))
-    {uOut tOut : Option (Option Key)}
-    (hrun : (uOut, tOut) ∈ support (Party.runHonestPair (recipient P hasOPK) (initiator P)
+    {uOut tOut : Option (Option Key)} {ms : List (Message ECKey PQPK CT S C IdC IdK)}
+    (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (recipient P hasOPK) (initiator P)
       ⟨ikB, sigkB, spkB, spkSigB⟩ ⟨ikA, ikB.public_key, sigkB.1, msg⟩ (4 + 1))) :
     uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join := by
-  simp only [Party.runHonestPair, initiator, recipient, mem_support_bind_iff, support_pure,
+  simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff] at hrun
   obtain ⟨pInit, ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, qInit, rfl, hrun⟩ := hrun
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.InitResult.opening, Party.InitResult.state, mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
+    mem_support_bind_iff] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
-  simp only [Party.runHonestPairLoop, mem_support_bind_iff] at hy
+  simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
   rcases mem_support_initiate P rfl
       (fun b hb => verify_eq_true_of_perfectlyComplete P hsig hsigkB _ hspkSigB hb)
@@ -463,8 +460,7 @@ lemma run_support_recipient
     simp only [support_pure, Set.mem_singleton_iff] at hy
     subst hy
     simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-    obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-    simp
+    simp_all
   · simp only [support_pure, Set.mem_singleton_iff] at hr
     subst hr
     dsimp only at hctxt hy
@@ -501,8 +497,7 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
       | false =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -512,8 +507,7 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
     | fail e =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -523,8 +517,7 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
     | div =>
         rw [accept_eq_pure_none P (pqxdh_accept_ne_ok_some hc (by simp))] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
@@ -534,8 +527,7 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-        obtain ⟨pOut, rfl, qOut, rfl, rfl, rfl⟩ := hout
-        simp
+        simp_all
 
 end
 

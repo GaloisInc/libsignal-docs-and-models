@@ -8,7 +8,6 @@ import PQXDH.Spec.Basic
 import PQXDH.Spec.UAKE
 import ToVCVio.CryptoFoundations.AKE.UAKE.Defs
 import PQXDH.AKE.UAKE.Transport
-import PQXDH.AKE.UAKE.RunHonest
 import ToVCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
 /-!
