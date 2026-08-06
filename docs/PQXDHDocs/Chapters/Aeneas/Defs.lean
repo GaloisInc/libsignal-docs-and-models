@@ -16,6 +16,7 @@ set_option linter.style.emptyLine false
 set_option linter.style.longLine false
 set_option linter.style.whitespace false
 set_option verso.docstring.allowMissing true
+set_option verso.blueprint.foldCodeBlocks true
 set_option doc.verso true
 
 #doc (Manual) "Aeneas-Extracted PQXDH Definitions" =>
