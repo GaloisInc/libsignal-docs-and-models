@@ -73,9 +73,9 @@ True if a party is well-formed, i.e. if it outputs iff the state is the result o
 :::
 
 ::::definition "uake_run_honest" (parent := "uake") (lean := "AKE.UAKE.Party.runHonest")
-Execute an honest run of the protocol. The result is a triple of $`P`'s output, $`Q`'s output, and the message list, with the `fuel` argument giving the number of rounds in the protocol.
+Execute an honest run of the protocol. The result is a triple of $`P`'s output, $`Q`'s output, and the message list. The `fuel` argument is an upper bound on how many party step functions may be run in the execution of the protocol.
 
-The run begins by dispatching on the two parties' initialization results to determine which party opens, then runs the two parties against each other. The messages sent are returned in chronological order alongside both parties' states; within the loop, `fuel` counts the rounds remaining and a Boolean tracks whose turn it is.
+The run begins by dispatching on the two parties' initialization results to determine which party opens, then runs the two parties against each other. The messages sent are returned in chronological order alongside both parties' states; within the loop a Boolean tracks whose turn it is — true for $`Q`, false for $`P` — and the messages sent so far are carried in *reverse* chronological order, so that each new message can be consed on, and reversed once the run ends.
 ::::
 
 # Schemes and correctness
@@ -203,16 +203,16 @@ True if the challenge transcript is ping-pong and a session whose transcript mat
 A challenge transcript is ping-pong when an oracle session matches it, meaning that the adversary is trivial: it simply relayed the oracle session in the challenge.
 ::::
 
-:::defTitle "uake_finalize" "Experiment finalization"
+:::defTitle "uake_finalize" "Key-distinguishing stage"
 :::
 
 ::::definition "uake_finalize" (parent := "uake") (lean := "AKE.UAKE.finalize")
-Final stage in the security experiment.
+Key-distinguishing stage in the UAKE security experiment.
 
 1. Pick between $`K_b = K_1` if $`b` is true, or $`K_b = K_0` otherwise.
 2. Finalize the challenge oracle, so the adversary cannot continue the challenge session, by setting `challengeDone`.
 3. Give the adversary $`K_b`, along with continued oracle access to copies of $`T`, and let it make a guess $`b'`.
-4. Declare the adversary a winner if $`b' = b` and the challenge session is not full ping-pong, in which case it wins with probability $`1/2`.
+4. Declare the adversary a winner if $`b' = b` and the challenge session does not match a revealed oracle session with $`T`; if it does match such a session, the adversary wins with probability $`1/2`.
 ::::
 
 :::defTitle "uake_exp" "Security experiment"
@@ -221,16 +221,16 @@ Final stage in the security experiment.
 ::::definition "uake_exp" (parent := "uake") (lean := "AKE.UAKE.Exp")
 The security experiment from Sec. 3 of DF'17.
 
-1. Run setup.
+1. Run setup to get $`uk` and $`tk`, the long-term state of the parties $`U` and $`T`.
 2. Choose a uniform challenge bit $`b`.
-3. Run the adversary with oracle access to copies of $`T` and the challenge session.
-4. Declare the adversary a winner if it did *not* relay the challenge session and the challenge key is not ⊥.
-5. Run finalization, either with $`K_0 = K_1 = ⊥` if the challenge key was ⊥, or on the challenge key $`K_0` and a uniformly chosen $`K_1`.
+3. Run $`\adv(uk)` with oracle access to copies of $`T(tk)` and the challenge session, letting $`K_0` be the challenge-session key.
+4. Declare $`\adv` a winner if it was able to spoof messages from $`T` in the challenge session and cause $`U` to accept — that is, if it did *not* simply relay messages from the $`T` oracle in the challenge session, and $`K_0 \neq ⊥`.
+5. Run the key-distinguishing stage, either with $`K_0 = K_1 = ⊥` if the challenge key was ⊥, or on the challenge key $`K_0` and a uniformly chosen $`K_1`.
 ::::
 
 :::defTitle "uake_advantage" "UAKE advantage"
 :::
 
 ::::definition "uake_advantage" (parent := "uake") (lean := "AKE.UAKE.advantage")
-$`\todo`
+The adversary's advantage in the UAKE security game. This is a *bool-biased* advantage: the amount by which its probability of winning differs from a fair coin flip.
 ::::

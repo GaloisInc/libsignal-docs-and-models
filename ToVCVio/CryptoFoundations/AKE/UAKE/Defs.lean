@@ -249,14 +249,14 @@ def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
   pingPong (proto.rounds % 2 == 1)
     ((tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
 
-/-- Final stage in the security experiment:
+/-- Key-distinguishing stage in the UAKE security experiment:
   1. Pick between `Kb = K1` (if `b = true`) or `Kb = K0` (otherwise)
   2. Finalize the challenge oracle so the adversary can't continue the
      challenge session by setting `env.challengeDone = true`
   3. Give the adversary Kb (and continued oracle access to copies of T) and let
      it make a guess b'
-  4. Declare the adversary a winner if b' = b and the challenge session is not
-     full ping-pong (in which case it wins w.p. 1/2) -/
+  4. Declare the adversary a winner if b' = b and the challenge session does not
+     match a revealed oracle session with T (in which case it wins w.p. 1/2) -/
 def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
@@ -268,11 +268,13 @@ def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
   if fullPingPong env'.tSessions cr then lift.liftProbComp ($ᵗ Bool) else pure (b' == b)
 
 /-- The security experiment from Sec. 3 of DF'17:
-  1. Run setup
+  1. Run setup to get uk and tk, the long-term state of the parties U and T
   2. Choose a uniform challenge bit `b`
-  3. Run A with oracle access to copies of T and the challenge session
-  4. Declare the adversary a winner if it did *not* relay the challenge session
-     and the challenge key is not ⊥
+  3. Run A(uk) with oracle access to copies of T(tk) and the challenge session,
+     letting K0 be the challenge-session key
+  4. Declare A a winner if it was able to spoof messages from T in the
+     challenge session and cause U to accept, i.e., if it did *not* simply
+     relay messages from the T oracle in the challenge session and K0 ≠ ⊥
   5. Run finalize, either with `K0 = K1 = ⊥` if the challenge key was ⊥, or on
      the challenge key K0 and a uniformly chosen K1 -/
 def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
@@ -289,6 +291,9 @@ def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     let K1 ← some <$> lift.liftProbComp ($ᵗ K)
     finalize lift A st cr b K1
 
+/-- The adversary's advantage in the UAKE security game. This is a
+  "bool-biased" advantage, i.e., the amount by which its probability of winning
+  differs from a fair coin flip. -/
 noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=

@@ -75,9 +75,13 @@ def OutputsOnlyAtCompletion [MonadLiftT m SetM] (P : Party m In W Out) : Prop :=
 
 /-- Helper function for runHonest. Run the two parties against each other. The
   messages sent are returned in chronological order, along with P's and Q's
-  states. The `fuel` argument indicates how many rounds remain in the protocol.
-  The Boolean indicates whether this is Q's or P's turn. And the `sent` list
-  contains the messages sent in the protocol so far. -/
+  states.
+  * The `fuel` argument is an upper bound on the number of party step functions
+    that may be run before the protocol completes.
+  * The Boolean indicates whether this is Q's (true) or P's (false) turn.
+  * The `sent` list contains the messages sent in the protocol so far. Note
+    that the `sent` list must be passed to this function in *reverse*
+    chronological order. This is to support easy cons-ing of new messages. -/
 def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
     ℕ → P.State → Q.State → W → Bool → List W → m (P.State × Q.State × List W)
@@ -107,8 +111,9 @@ def runHonestStart [Monad m] {InP OutP InQ OutQ : Type}
   | none, none => pure (pInit.state, qInit.state, [])
 
 /-- Execute an honest run of the protocol. The result is a triple of P's
-  output, Q's output, and the message list. The `fuel` argument indicates how
-  many rounds are in the protocol. -/
+  output, Q's output, and the message list. The `fuel` argument is an upper
+  bound on how many party step functions may be run in the execution of the
+  protocol. -/
 def runHonest [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
     m (Option OutP × Option OutQ × List W) := do
