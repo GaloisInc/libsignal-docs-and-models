@@ -5,6 +5,10 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Spec.UAKE.CorrectnessLemmas
 
+/-!
+# Top-level Correctness Theorems for Spec-based PQXDH
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open scoped ENNReal
 
@@ -12,6 +16,10 @@ namespace PQXDH
 
 variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
 
+/-- Spec-based PQXDH in the T=Bob direction has perfect UAKE correctness,
+  assuming the KEM and AEAD are perfectly correct and the signature is
+  perfectly complete (i.e., never fails on an honestly generated signature,
+  when paired with the message used to generate it). -/
 theorem uakeInitiator_perfectlyCorrect
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
@@ -34,10 +42,15 @@ theorem uakeInitiator_perfectlyCorrect
     simp
   simp only [setup, mem_support_bind_iff,
     support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hsetup
-  obtain ⟨ikA, hikA, ikB, hikB, sigkB, hsigkB, spkB, hspkB, spkSigB, hspkSigB, huk, htk⟩ := hsetup
+  obtain ⟨ikA, hikA, ikB, hikB, sigkB, hsigkB, spkB, hspkB, spkSigB, hspkSigB,
+    huk, htk⟩ := hsetup
   subst huk htk
   exact run_support_initiator P hasOPK hsig hkem haead msg hikA hikB hsigkB hspkB hspkSigB hrun
 
+/-- Spec-based PQXDH in the T=Alice direction has perfect UAKE correctness,
+  assuming the KEM and AEAD are perfectly correct and the signature is
+  perfectly complete (i.e., never fails on an honestly generated signature,
+  when paired with the message used to generate it). -/
 theorem uakeRecipient_perfectlyCorrect
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]

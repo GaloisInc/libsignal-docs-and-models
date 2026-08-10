@@ -3,11 +3,6 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-/-
-Copyright (c) 2026 Galois Inc. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Ben Hamlin
--/
 import PQXDH.Spec.Basic
 import ToVCVio.CryptoFoundations.AKE.UAKE.Defs
 import PQXDH.ToMathlib
@@ -18,51 +13,41 @@ import VCVio.OracleComp.QueryTracking.QueryBound
 import VCVio.ProgramLogic.Relational.Quantitative
 
 /-!
-# PQXDH modeled as a DF'17-style UAKE
+# PQXDH Modeled as a DF'17-style UAKE
+
+Using our Lean implementation of the PQXDH spec, we construct a unilaterally
+authenticated key exchange scheme, as described in Dodis and Fiore 2017
+(see the docs directory). A UAKE is a two-party protocol between parties U and
+T, in which U and T derive a shared secret. UAKE security ensures that, if U
+accepts the exchange, the shared secret is indistinguishable from random, and
+T's messages sent to U are authentic.
+
+The "unilateral" part of a UAKE means that its two parties play different
+roles: The T party is authenticated, and UAKE security ensures that the
+adversary cannot spoof its messages in an exchange. The U is unauthenticated,
+and merely checks the T party's authenticity. For that reason, we instantiate
+the protocol twice, once with Alice as T, and once with Bob as T.
 
 Model simplifications
-* **Unilateral authentication:** UAKE is unilaterally authenticated. In
-  principle, it should be possible to model a protocol in both directions to
-  show multilateral authentication. However, we model security only for the
-  "Bob authenticates to Alice" direction. This is because UAKE security
-  requires explicit authentication, and Alice's authentication to Bob is
-  implicit via the adversary being unable to compute the DH output, rather than
-  relying on Alice's signature (she signs nothing).
-* **SUF-CMA signature (not EUF-CMA):** Since UAKE is a
-  transcript-matching-style definition, our security theorems are subject to
-  harmless but definition-breaking "no-match" attacks on the signature scheme.
-  See Li & Schäge, "No-Match Attacks and Robust Partnering Definitions" (ACM CCS
-  2017) for a reference on attacks of this kind.
-* **Bob's extra message:** In the PQXDH spec, the exchange ends at Alice's
-  first message to Bob, but UAKE requires that the last message be sent by the
-  keyed party (Bob). Therefore we add an extra message from Bob under the AEAD
-  at the end of the protocol. This would represent the second message in the
-  conversation between Alice and Bob.
 * **Medium-term secrets as long-term:** The spec describes SPK and PQSPK as
   "changed periodically", but the UAKE security game only allows for permanent
   (via setup) and per-session (via init) keys. We model SPK (and its signature)
   as permanent, along with IK{A|B}.
 * **No fallback KEM key:** We do not (currently) model the spec's last-resort
-  KEM key (PQSPK). We generate a one-time KEM key (PQOPKᵢ) every time. This is
-  a pure simplification, and we plan to extend the model to include the
-  last-resort KEM key in the future.
-
-Protocol questions:
-* **Key reuse between DH and SignatureAlg:** We assume that Bob's identity key
-  contains separate keys for DH exchange and signing. This matches the "no key
-  reuse" simplification mentioned in Sec. 4 of the spec that other formal
-  analyses required.
-* **Separate AEAD key:** The PQXDH spec uses the same KDF output for both
-  Alice's AEAD key and the final result of the key exchange, but this seems to
-  preclude key indistinguishability. This is because the adversary can try
-  using the candidate key to decrypt Alice's message. This will fail for a
-  random key (with high likelihood) but succeed for the real key, thus
-  distinguishing them. The spec allows KA to be SK or PRF(SK, ·), but both
-  variants break key indistinguishability. This could be easily fixed by using
-  the KDF output as the key to a PRF that generates **both** SK and KA, but
-  the spec **only describes a PRF-derived KA**, which is insufficient. We
-  sidestep this and model the final key and Alice's AEAD (and Bob's AEAD key;
-  see bullet 3 of "Model simplifications") as separate KDF outputs.
+  KEM key (PQSPK). We generate a one-time KEM key (PQOPKᵢ) every time. We plan
+  to extend the model to include the fallback branch in the future. Note that
+  this is not necessarily a simple extension, since the fallback branch we omit
+  is substantively weaker: According to Section 4.7 of the spec, compromising
+  PQSPKB in a PQ setting retroactively compromises the session's SK in the
+  fallback case, and Sections 4.2 and 4.3 note that replay becomes possible if
+  a one-time key is omitted.
+* **Key bundle as a message from Bob:** The PQXDH spec describes the key bundle
+  as coming from a third party server. Since UAKE is a two-party protocol, we
+  model it as coming from Bob instead.
+* **KEM public key unconditionally included in AD:** The spec requires Bob's KEM
+  public key to be included in AD "if pqkem does not incorporate [it] into the
+  ciphertext." We unconditionally include it, which allows us to make no such
+  assumption about the KEM.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -72,13 +57,18 @@ namespace PQXDH
 
 variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
 
-
+/-- The message type in the UAKE exchange. -/
 inductive Message (G PQPK CT S C IdC IdK : Type) where
+  /-- Bob's pre-key bundle -/
   | bundle : PreKeyBundle G PQPK S IdC IdK → Message G PQPK CT S C IdC IdK
+  /-- Alice's message to Bob initiating the key exchange -/
   | initial : InitialMessage G CT C IdC IdK → Message G PQPK CT S C IdC IdK
+  /-- Bob's confirmation message, if the exchange is accepted -/
   | confirmation : C → Message G PQPK CT S C IdC IdK
   deriving DecidableEq
 
+/-- Alice's Party state machine, which internally uses the `initiate` function,
+  traceable to the PQXDH spec. -/
 def initiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
@@ -100,6 +90,8 @@ def initiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     | .inr (.inr SK) => pure (some (some SK))
     | _ => pure none
 
+/-- Bob's Party state machine, which internally uses the `accept` and `publish`
+  functions, traceable to the PQXDH spec. -/
 def recipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (hasOPK : Bool) :
@@ -133,40 +125,58 @@ def recipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     | .inl _ => pure none
     | .inr SK => pure (some (some SK))
 
+/-- UAKE scheme in which Bob plays the part of the authenticated party T. -/
 def uakeInitiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool) :
     UAKE.Scheme ProbComp K (InitiatorParameters F G SPK Msg)
       (RecipientIdentity F G SPK SSK S)
       (Message G PQPK CT S C IdC IdK) where
+  /- 3 messages sent:
+    Bob's pre-key bundle → Alice's initiate message → Bob's accept message -/
   rounds := 3
+  /- Generate long-term state using `setup`. -/
   setup := setup P msg
+  /- Alice is unkeyed party -/
   U := initiator P
+  /- Bob is authenticated party -/
   T := recipient P hasOPK
 
+/-- UAKE scheme in which Alice plays the part of the authenticated party T. -/
 def uakeRecipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool) :
     UAKE.Scheme ProbComp K (RecipientIdentity F G SPK SSK S)
       (InitiatorParameters F G SPK Msg)
       (Message G PQPK CT S C IdC IdK) where
+  /- 4 messages sent:
+    Bob's pre-key bundle → Alice's initiate message
+        → Bob's accept message → Alice's confirmation -/
   rounds := 4
+  /- Generate long-term state using `setup`. -/
   setup := Prod.swap <$> setup P msg
+  /- Bob is unkeyed party -/
   U := recipient P hasOPK
+  /- Alice is authenticated party -/
   T := initiator P
 
+/-- Bounds the number of sessions started by the adversary with its T oracle by
+  bounding the number of openT queries. -/
 def _root_.AKE.UAKE.Adversary.OpensAtMost {K UK TK W : Type}
     {proto : UAKE.Scheme ProbComp K UK TK W}
     (A : UAKE.Adversary proto) (q : ℕ) : Prop :=
   (∀ uk w, (A.challenge uk w).IsQueryBoundP (· matches Sum.inr .openT) q) ∧
     (∀ st k, (A.post st k).IsQueryBoundP (· matches Sum.inr .openT) q)
 
+/-- KDF modeled as a PRF keyed by a bitstring (e.g., the output of the KEM). -/
 def kdfPRF [SampleableType SS]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
     PRFScheme SS (G × G × G × Option G) (K × K × K) where
   keygen := $ᵗ SS
   eval := fun ss q => P.kdf (q.1, q.2.1, q.2.2.1, q.2.2.2, ss)
 
+/-- KDF modeled as a PRF keyed by a DH group element (e.g., the output of a DH
+  key exchange). -/
 def kdfPRFDH [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
     PRFScheme F (G × G × Option G × SS) (K × K × K) where

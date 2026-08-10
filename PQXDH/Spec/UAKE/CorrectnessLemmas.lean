@@ -186,7 +186,8 @@ lemma run_support_initiator
     ∃ k, uOut = some (some k) ∧ tOut = some (some k) := by
   simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff] at hrun
-  obtain ⟨pInit, rfl, qInit, ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, hrun⟩ := hrun
+  obtain ⟨pInit, rfl, qInit,
+    ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, hrun⟩ := hrun
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
@@ -258,7 +259,8 @@ lemma run_support_recipient
     ∃ k, uOut = some (some k) ∧ tOut = some (some k) := by
   simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff] at hrun
-  obtain ⟨pInit, ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, qInit, rfl, hrun⟩ := hrun
+  obtain ⟨pInit,
+    ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, qInit, rfl, hrun⟩ := hrun
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
