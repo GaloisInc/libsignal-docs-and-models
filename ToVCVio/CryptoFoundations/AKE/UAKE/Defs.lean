@@ -137,10 +137,16 @@ inductive Op (W : Type) where
   /-- Increment the challenge session (created up front) -/
   | stepChallenge : W → Op W
 
+/-- A UAKE adversary's T oracle. -/
 def oracleSpec (K W : Type) : OracleSpec (Op W)
+  /- Create a session with a new copy of T. -/
   | .openT => ℕ × Option W
+  /- Send a message to T in an existing session. -/
   | .stepT _ _ => W ⊕ Unit
+  /- Reveal T's shared key output for an existing session. Returns none if the
+    session is not complete. -/
   | .revealT _ => Option K
+  /- Send a message to U in the challenge session. -/
   | .stepChallenge _ => W ⊕ Unit
 
 /-- Logic for the UAKE experiment's `Op` queries: the T-session and
@@ -220,11 +226,16 @@ structure Adversary (proto : Scheme m K UK TK W) where
   challenge : UK → Option W → OracleComp (unifSpec + oracleSpec K W) State
   post : State → Option K → OracleComp (unifSpec + oracleSpec K W) Bool
 
+/-- The output of the challenge session in the UAKE security game. -/
 structure ChallengeResult (proto : Scheme m K UK TK W) where
+  /-- Key output, if any. -/
   K0 : Option K
+  /-- Challenge session transcript. -/
   challengeTr : Transcript W
+  /-- List of transcripts to all T oracle sessions. -/
   oracleTrs : List (Transcript W)
 
+/-- Run the challenge session for the UAKE security game. -/
 def challengeSession [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) (uk : UK) (tk : TK) :
     m (ChallengeResult proto × (A.State × Env proto × TK)) := do
