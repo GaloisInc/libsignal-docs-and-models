@@ -57,7 +57,7 @@ Result of a party's step function. A step may accept the incoming message and se
 :::
 
 ::::definition "uake_party" (parent := "uake") (lean := "AKE.UAKE.Party")
-A party, structured as a Mealy machine with a final output function. In DF'17 a party is an ITM; here it is instead modelled as a Mealy machine with a step function that outputs a protocol message and a new state. The output function takes the party's state and produces its final output — in UAKE, this is the key.
+A party, structured as a Mealy machine with a final output function. In DF'17 a party is an ITM; here it is instead modelled as a Mealy machine with a step function that outputs a protocol message and a new state. The output function takes the party's state and produces its final output (in UAKE, this is the key).
 
 It is up to the protocol realization to ensure that the output function produces output only at the end.
 ::::
@@ -75,7 +75,7 @@ True if a party is well-formed, i.e. if it outputs iff the state is the result o
 ::::definition "uake_run_honest" (parent := "uake") (lean := "AKE.UAKE.Party.runHonest")
 Execute an honest run of the protocol. The result is a triple of $`P`'s output, $`Q`'s output, and the message list. The `fuel` argument is an upper bound on how many party step functions may be run in the execution of the protocol.
 
-The run begins by dispatching on the two parties' initialization results to determine which party opens, then runs the two parties against each other. The messages sent are returned in chronological order alongside both parties' states; within the loop a Boolean tracks whose turn it is — true for $`Q`, false for $`P` — and the messages sent so far are carried in *reverse* chronological order, so that each new message can be consed on, and reversed once the run ends.
+The run begins by dispatching on the two parties' initialization results to determine which party opens, then runs the two parties against each other. The messages sent are returned in chronological order alongside both parties' states; within the loop a Boolean tracks whose turn it is (true for $`Q`, false for $`P`), and the messages sent so far are carried in *reverse* chronological order, so that each new message can be consed on, and reversed once the run ends.
 ::::
 
 # Schemes and correctness
@@ -86,8 +86,8 @@ The run begins by dispatching on the two parties' initialization results to dete
 ::::definition "uake_scheme" (parent := "uake") (lean := "AKE.UAKE.Scheme")
 A UAKE scheme with a fixed number of rounds. The keyed (authenticated) party is $`T`; the unkeyed (unauthenticated) party is $`U`.
 
-- `rounds`: the total number of protocol messages sent — not round trips — in an honest execution, assumed fixed for a given protocol. This is not enforced structurally but is captured by the well-formedness predicate. Together with the $`T`-speaks-last convention of DF'17 it determines the first speaker in the ping-pong predicates used in the security game.
-- `setup`: create the initial key material used by $`U` and $`T`. In the security game this is called just once by the challenger — as opposed to $`T`'s init function, which is called each time the adversary spins up a new party instance — so the parameters it creates are long term and global.
+- `rounds`: the total number of protocol messages sent (not round trips) in an honest execution, assumed fixed for a given protocol. This is not enforced structurally but is captured by the well-formedness predicate. Together with the $`T`-speaks-last convention of DF'17 it determines the first speaker in the ping-pong predicates used in the security game.
+- `setup`: create the initial key material used by $`U` and $`T`. In the security game this is called just once by the challenger (as opposed to $`T`'s init function, which is called each time the adversary spins up a new party instance), so the parameters it creates are long term and global.
 - `U`: the unkeyed (unauthenticated) party.
 - `T`: the keyed (authenticated) party.
 ::::
@@ -173,6 +173,18 @@ Adversary's oracle operations for the UAKE security experiment.
 - `stepChallenge`: increment the challenge session, which is created up front.
 ::::
 
+:::defTitle "uake_oracle_spec" "Adversary oracle interface"
+:::
+
+::::definition "uake_oracle_spec" (parent := "uake") (lean := "AKE.UAKE.oracleSpec")
+A UAKE adversary's $`T` oracle.
+
+- `openT`: create a session with a new copy of $`T`.
+- `stepT`: send a message to $`T` in an existing session.
+- `revealT`: reveal $`T`'s shared key output for an existing session. Returns none if the session is not complete.
+- `stepChallenge`: send a message to $`U` in the challenge session.
+::::
+
 :::defTitle "uake_op_impl" "T-session and challenge oracles"
 :::
 
@@ -184,7 +196,7 @@ Logic for the UAKE experiment's oracle queries: the $`T`-session and challenge-s
 :::
 
 ::::definition "uake_oracle_impl" (parent := "uake") (lean := "AKE.UAKE.oracleImpl")
-Full oracle for the UAKE experiment. Uniform-sampling queries — the adversary's coin flips — are forwarded to the ambient monad; the remaining queries are handled by the $`T`-session and challenge-session oracles.
+Full oracle for the UAKE experiment. Uniform-sampling queries (the adversary's coin flips) are forwarded to the ambient monad; the remaining queries are handled by the $`T`-session and challenge-session oracles.
 ::::
 
 :::defTitle "uake_adversary" "UAKE adversary"
@@ -192,6 +204,24 @@ Full oracle for the UAKE experiment. Uniform-sampling queries — the adversary'
 
 ::::definition "uake_adversary" (parent := "uake") (lean := "AKE.UAKE.Adversary")
 An adversary in the UAKE security game. It runs in two stages: a challenge stage, with oracle access to copies of $`T` and to the challenge session, and a post stage, which receives the challenge key and outputs a guess.
+::::
+
+:::defTitle "uake_challenge_result" "Challenge-session result"
+:::
+
+::::definition "uake_challenge_result" (parent := "uake") (lean := "AKE.UAKE.ChallengeResult")
+The output of the challenge session in the UAKE security game.
+
+- `K0`: key output, if any.
+- `challengeTr`: challenge session transcript.
+- `oracleTrs`: list of transcripts to all $`T` oracle sessions.
+::::
+
+:::defTitle "uake_challenge_session" "Challenge session"
+:::
+
+::::definition "uake_challenge_session" (parent := "uake") (lean := "AKE.UAKE.challengeSession")
+Run the challenge session for the UAKE security game.
 ::::
 
 :::defTitle "uake_ping_pong" "Ping-pong relaying"
@@ -224,7 +254,7 @@ The security experiment from Sec. 3 of DF'17.
 1. Run setup to get $`uk` and $`tk`, the long-term state of the parties $`U` and $`T`.
 2. Choose a uniform challenge bit $`b`.
 3. Run $`\adv(uk)` with oracle access to copies of $`T(tk)` and the challenge session, letting $`K_0` be the challenge-session key.
-4. Declare $`\adv` a winner if it was able to spoof messages from $`T` in the challenge session and cause $`U` to accept — that is, if it did *not* simply relay messages from the $`T` oracle in the challenge session, and $`K_0 \neq ⊥`.
+4. Declare $`\adv` a winner if it was able to spoof messages from $`T` in the challenge session and cause $`U` to accept, i.e., if it did *not* simply relay messages from the $`T` oracle in the challenge session, and $`K_0 \neq ⊥`.
 5. Run the key-distinguishing stage, either with $`K_0 = K_1 = ⊥` if the challenge key was ⊥, or on the challenge key $`K_0` and a uniformly chosen $`K_1`.
 ::::
 
