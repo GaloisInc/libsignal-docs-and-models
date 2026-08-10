@@ -6,6 +6,8 @@ Authors: Ben Hamlin
 import PQXDH.Aeneas.Simplified.UAKE.Defs
 import PQXDH.Aeneas.Simplified.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Simplified.UAKE.Correctness
+import PQXDH.Aeneas.Simplified.UAKE.SecurityDefs
+import PQXDH.Aeneas.Simplified.UAKE.Assumptions
 import PQXDH.Aeneas.Simplified.UAKE.SecurityLemmas
 import PQXDH.Aeneas.Simplified.UAKE.Security
 

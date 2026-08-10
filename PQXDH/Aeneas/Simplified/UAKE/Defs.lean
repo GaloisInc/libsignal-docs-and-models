@@ -127,14 +127,6 @@ def AgreeComm (P : Parameters SPK SSK S C Msg IdC IdK) : Prop :=
     pqxdh.x25519_agree kp₁.private_key kp₂.public_key
       = pqxdh.x25519_agree kp₂.private_key kp₁.public_key
 
-def AgreeTotal (P : Parameters SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
-    ∃ z, pqxdh.x25519_agree kp₁.private_key kp₂.public_key = .ok z
-
-def EncapsTotal (P : Parameters SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ kp ∈ support P.pqKeygen, ∀ coins ∈ support P.encapsCoins,
-    ∃ r, pqxdh.mlkem_encapsulate kp.1 coins = .ok r
-
 def kdfPRF : PRFScheme SS (ECKey × ECKey × ECKey × Option ECKey) (Key × Key × Key) where
   keygen := $ᵗ SS
   eval := fun ss q => getOk (deriveKeys q.1 q.2.1 q.2.2.1 q.2.2.2 ss)

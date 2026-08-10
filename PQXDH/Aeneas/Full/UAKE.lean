@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.Defs
-import PQXDH.Aeneas.Full.UAKE.CommonLemmas
+import PQXDH.Aeneas.Full.UAKE.Assumptions
 import PQXDH.Aeneas.Full.UAKE.CorrectnessDefs
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Full.UAKE.Correctness

@@ -5,6 +5,14 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.Defs
 
+/-!
+# Common assumptions for correctness and security proofs.
+
+This module collects facts about the Rust implementation that appear to be
+true, but which are unprovable here due to gaps in the code model extracted by
+Aeneas.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
 
@@ -71,14 +79,6 @@ lemma extractedSig_signTotal
     (sk : ECPriv) (m : ECPub ⊕ PQPub) (r : Rand) :
     ∃ σ rest, libsignal_core.curve.PrivateKey.calculate_signature cryptoRngInst rngInst sk
       (encMsg m) r = .ok (.Ok σ, rest) := sorry
-
-lemma extractedSig_perfectlyComplete
-    (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
-    (coins : ProbComp Rand) {keygen : ProbComp ECKeyPair}
-    (hkeygen : ∀ kp ∈ support keygen, ECKeyPairValid kp)
-    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8) :
-    (extractedSig rngInst cryptoRngInst coins keygen encMsg).PerfectlyComplete
-      ProbCompRuntime.probComp := sorry
 
 end
 

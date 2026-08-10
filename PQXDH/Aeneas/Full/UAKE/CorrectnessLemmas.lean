@@ -729,6 +729,31 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
         simp_all
 
+lemma extractedSig_perfectlyComplete {Rand : Type}
+    (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
+    (coins : ProbComp Rand) {keygen : ProbComp ECKeyPair}
+    (hkeygen : ∀ kp ∈ support keygen, ECKeyPairValid kp)
+    (encMsg : ECPub ⊕ PQPub → Aeneas.Std.Slice Aeneas.Std.U8) :
+    (extractedSig rngInst cryptoRngInst coins keygen encMsg).PerfectlyComplete
+      ProbCompRuntime.probComp := by
+  intro m
+  rw [probOutput_probComp_evalDist]
+  refine probOutput_eq_one_of_support_subset_singleton ?_ ?_
+  · exact probFailure_of_liftM_PMF _
+  intro b hb
+  simp only [extractedSig, mem_support_bind_iff, support_pure,
+    Set.mem_singleton_iff] at hb
+  obtain ⟨x, ⟨kp, hkp, rfl⟩, σ, ⟨r, hr, hσ⟩, hb⟩ := hb
+  obtain ⟨σ₀, rest, hsig_eq⟩ := extractedSig_signTotal rngInst cryptoRngInst encMsg
+    kp.private_key m r
+  rw [hsig_eq] at hσ
+  simp only [support_pure, Set.mem_singleton_iff] at hσ
+  subst hσ
+  obtain ⟨parts, hparts, hverify⟩ := extractedSig_signVerify rngInst cryptoRngInst encMsg
+    (hkeygen kp hkp) m r hsig_eq
+  simp only [hparts, hverify, support_pure, Set.mem_singleton_iff] at hb
+  exact hb
+
 end
 
 end PQXDH.Aeneas.Full

@@ -199,11 +199,6 @@ def extractedSig (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.Cryp
 def ECKeyPairValid (kp : ECKeyPair) : Prop :=
   libsignal_core.curve.PrivateKey.public_key kp.private_key = .ok (.Ok kp.public_key)
 
-def AgreeTotal (P : Parameters Rand SPK SSK S C Msg IdC IdK) : Prop :=
-  ∀ kp₁ ∈ support P.ecKeygen, ∀ kp₂ ∈ support P.ecKeygen,
-    ∃ z, libsignal_core.curve.PrivateKey.calculate_agreement kp₁.private_key kp₂.public_key
-      = .ok (.Ok z)
-
 structure InitiatorParameters (SPK Msg : Type) where
   ikA : IdKeyPair
   ikB : IdKey
