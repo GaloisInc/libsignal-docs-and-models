@@ -26,7 +26,12 @@ The "unilateral" part of a UAKE means that its two parties play different
 roles: The T party is authenticated, and UAKE security ensures that the
 adversary cannot spoof its messages in an exchange. The U is unauthenticated,
 and merely checks the T party's authenticity. For that reason, we instantiate
-the protocol twice, once with Alice as T, and once with Bob as T.
+the protocol twice, once with Alice as T, and once with Bob as T. Note that
+these two instantiations need slightly different shapes, due to the convention
+from DF'17 that "T speaks last". In both cases, the initial message is from
+Bob, so the T=Bob case is 3-round, with an extra confirmation message from Bob
+(see bullet 1 of "Model simplifications" in PQXDH/Spec/Basic.lean) whereas the
+T=Alice case is the standard 2-round protocol.
 
 Model simplifications
 * **Medium-term secrets as long-term:** The spec describes SPK and PQSPK as
@@ -68,7 +73,8 @@ inductive Message (G PQPK CT S C IdC IdK : Type) where
   deriving DecidableEq
 
 /-- Alice's Party state machine, which internally uses the `initiate` function,
-  traceable to the PQXDH spec. -/
+  traceable to the PQXDH spec, followed by the `confirm` function, which checks
+  Bob's AEAD ciphertext (not in the spec). -/
 def initiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
@@ -91,7 +97,8 @@ def initiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     | _ => pure none
 
 /-- Bob's Party state machine, which internally uses the `accept` and `publish`
-  functions, traceable to the PQXDH spec. -/
+  functions, traceable to the PQXDH spec, as well as sending a final AEAD
+  message (not in the spec). -/
 def recipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (hasOPK : Bool) :
@@ -125,7 +132,9 @@ def recipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     | .inl _ => pure none
     | .inr SK => pure (some (some SK))
 
-/-- UAKE scheme in which Bob plays the part of the authenticated party T. -/
+/-- UAKE scheme in which Bob plays the part of the authenticated party T and
+  sends a final AEAD ciphertext to match the "T speaks last" convention from
+  DF'17. -/
 def uakeInitiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool) :
@@ -133,7 +142,7 @@ def uakeInitiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
       (RecipientIdentity F G SPK SSK S)
       (Message G PQPK CT S C IdC IdK) where
   /- 3 messages sent:
-    Bob's pre-key bundle → Alice's initiate message → Bob's accept message -/
+    Bob's pre-key bundle → Alice's initiate message → Bob's confirmation message -/
   rounds := 3
   /- Generate long-term state using `setup`. -/
   setup := setup P msg
@@ -142,23 +151,66 @@ def uakeInitiator [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
   /- Bob is authenticated party -/
   T := recipient P hasOPK
 
+/-- Alice's Party state machine, which internally uses the `initiate` function,
+  traceable to the PQXDH spec. -/
+def initiatorNoConfirm [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
+    [DecidableEq G]
+    (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
+    Party ProbComp (InitiatorParameters F G SPK Msg)
+      (Message G PQPK CT S C IdC IdK) (Option K) where
+  State := InitiatorParameters F G SPK Msg ⊕ K
+  init := fun p => pure (.waitForMsg (.inl p))
+  step := fun st w => match st, w with
+    | .inl p, .bundle b => do
+        match ← initiate P p b with
+        | some (im, ctx) => pure (.acceptAndSend (.inr ctx.sk) (.initial im) true)
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inr SK => pure (some (some SK))
+    | _ => pure none
+
+/-- Bob's Party state machine, which internally uses the `publish` and `accept`
+  functions, traceable to the PQXDH spec. -/
+def recipientNoConfirm [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
+    [DecidableEq IdC] [DecidableEq IdK]
+    (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (hasOPK : Bool) :
+    Party ProbComp (RecipientIdentity F G SPK SSK S)
+      (Message G PQPK CT S C IdC IdK) (Option K) where
+  State := RecipientParameters F G PQPK PQSK SPK SSK S ⊕ K
+  init := fun idn => do
+    let opkB ← genOPK P.gen hasOPK
+    let pqpkB ← P.pqkem.keygen
+    let p : RecipientParameters F G PQPK PQSK SPK SSK S :=
+      { ikB := idn.ikB, sigkB := idn.sigkB, spkB := idn.spkB, spkSigB := idn.spkSigB,
+        opkB := opkB, pqpkB := pqpkB }
+    let bundle ← publish P p
+    pure (.speakFirst (.inl p) (.bundle bundle))
+  step := fun st w => match st, w with
+    | .inl p, .initial im => do
+        match ← accept P p im with
+        | some ctx => pure (.complete (.inr ctx.sk))
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inl _ => pure none
+    | .inr SK => pure (some (some SK))
+
 /-- UAKE scheme in which Alice plays the part of the authenticated party T. -/
 def uakeRecipient [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
-    [DecidableEq G] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
+    [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool) :
     UAKE.Scheme ProbComp K (RecipientIdentity F G SPK SSK S)
       (InitiatorParameters F G SPK Msg)
       (Message G PQPK CT S C IdC IdK) where
-  /- 4 messages sent:
-    Bob's pre-key bundle → Alice's initiate message
-        → Bob's accept message → Alice's confirmation -/
-  rounds := 4
+  /- 2 messages sent: Bob's pre-key bundle → Alice's initiate message -/
+  rounds := 2
   /- Generate long-term state using `setup`. -/
   setup := Prod.swap <$> setup P msg
   /- Bob is unkeyed party -/
-  U := recipient P hasOPK
+  U := recipientNoConfirm P hasOPK
   /- Alice is authenticated party -/
-  T := initiator P
+  T := initiatorNoConfirm P
 
 /-- Bounds the number of sessions started by the adversary with its T oracle by
   bounding the number of openT queries. -/

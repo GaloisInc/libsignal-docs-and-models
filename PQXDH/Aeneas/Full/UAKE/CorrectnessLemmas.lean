@@ -633,12 +633,12 @@ lemma run_support_recipient
     (hspkB : spkB ∈ support P.ecKeygen)
     (hspkSigB : spkSigB ∈ support (P.sig.sign sigkB.1 sigkB.2 (EncodeEC spkB.public_key)))
     {uOut tOut : Option (Option Key)} {ms : List (Message ECPub PQPub CT S C IdC IdK)}
-    (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (recipient P hasOPK) (initiator P)
-      ⟨identityKeyPairOf ikB, sigkB, spkB, spkSigB⟩
-      ⟨identityKeyPairOf ikA, identityKeyOf ikB, sigkB.1, msg⟩ (4 + 1))) :
+    (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (recipientNoConfirm P hasOPK)
+      (initiatorNoConfirm P) ⟨identityKeyPairOf ikB, sigkB, spkB, spkSigB⟩
+      ⟨identityKeyPairOf ikA, identityKeyOf ikB, sigkB.1, msg⟩ (2 + 1))) :
     uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join := by
-  simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
-    Set.mem_singleton_iff] at hrun
+  simp only [Party.runHonest, initiatorNoConfirm, recipientNoConfirm, mem_support_bind_iff,
+    support_pure, Set.mem_singleton_iff] at hrun
   obtain ⟨pInit, ⟨opkB, hopkB_mem, pqpkB, hpqpkB, bundle, hbundle, rfl⟩, qInit, rfl,
     hrun⟩ := hrun
   have hopkB := opkB_mem_of_genOPK hopkB_mem
@@ -692,13 +692,8 @@ lemma run_support_recipient
         rw [accept_eq_pure_some P rfl rfl hidOPK hacc hdecA] at har
         simp only [support_pure, Set.mem_singleton_iff] at har
         subst har
-        simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hsr
-        obtain ⟨conf, hconf, rfl⟩ := hsr
-        have hconfirm := aead_decrypt_encrypt_of_perfectlyCorrect P haead _ _ _ hconf
-        simp only [identityKeyPairOf, identityKeyOf] at hconfirm
-        simp only [confirm, identityKeyPairOf, identityKeyOf, hconfirm, reduceIte,
-          mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hy
-        obtain ⟨x, rfl, hy⟩ := hy
+        simp only [support_pure, Set.mem_singleton_iff] at hsr
+        subst hsr
         simp only [support_pure, Set.mem_singleton_iff] at hy
         subst hy
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout

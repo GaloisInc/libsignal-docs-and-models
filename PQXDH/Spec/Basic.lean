@@ -20,15 +20,15 @@ Model simplifications
 * **Bob's extra message:** In the PQXDH spec, the exchange ends at Alice's
   first message to Bob, but UAKE requires that the last message be sent by the
   keyed party (Bob). Therefore we add an extra message from Bob under the AEAD
-  at the end of the protocol. This would represent the second message in the
-  conversation between Alice and Bob. We represent this by returning
-  `⟨sk, kb, ad, m⟩`, rather than just the shared key `sk`, if Bob's `accept`
-  procedure succeeds. Here, `m` and `ad` are the same as the message and
-  additional data sent by Alice in her AEAD message, and `kb` is an AEAD key
-  (output by the KDF independently from the shared secret and Alice's AEAD
+  at the end of the protocol in the T=Bob case. This would represent the second
+  message in the conversation between Alice and Bob. We represent this by
+  returning `⟨sk, kb, ad, m⟩`, rather than just the shared key `sk`, if Bob's
+  `accept` procedure succeeds. Here, `m` and `ad` are the same as the message
+  and additional data sent by Alice in her AEAD message, and `kb` is an AEAD
+  key (output by the KDF independently from the shared secret and Alice's AEAD
   key). This is then sent to Alice, who uses the `confirm` procedure to check
   that it decrypts under the same `kb` and has the correct content, and returns
-  `sk`, if so.
+  `sk`, if so. The T=Alice case is PQXDH as written in the spec.
 * **No key reuse between DH and SignatureAlg:** We assume that Bob's identity key
   contains separate keys for DH exchange and signing. This matches the "no key
   reuse" simplification mentioned in Sec. 4 of the spec that other formal
@@ -185,7 +185,7 @@ structure InitialMessage (G CT C IdC IdK : Type) where
 
 /-- Session context stored by Alice after running `initiate` and sending her
   AEAD ciphertext. This is subsequently used by the `confirm` procedure. (See
-  bullet 1 of "Modeling simplifications".). -/
+  bullet 1 of "Model simplifications".). -/
 structure SessionContext (G PQPK Msg K : Type) where
   /-- Shared key output by the KDF. -/
   sk : K
@@ -195,7 +195,7 @@ structure SessionContext (G PQPK Msg K : Type) where
       might represent the second message in the exchange, in the same way that
       Alice's AEAD ciphertext represents the first) is required in order to
       realize the T=Bob UAKE direction without being trivially insecure. See
-      bullet 1 of "Modeling simplifications". -/
+      bullet 1 of "Model simplifications". -/
   kb : K
   /-- Additional data used in the AEAD ciphertexts. -/
   ad : G × G × PQPK
@@ -271,8 +271,8 @@ def initiate [Field F] [AddCommGroup G] [Module F G] [SampleableType F] [Decidab
   the correct AD and KDF-derived key. Return sk, if so. Also return the key,
   message, and AD for Bob's own AEAD ciphertext.
   * DEVIATION FROM SPEC: Bob's AEAD ciphertext is not present in the spec, but
-    it's needed in order to fit the UAKE security definition. See bullet 1 of
-    "Modeling simplifications". -/
+    it's needed in order to fit the UAKE security definition in the T=Bob case.
+    See bullet 1 of "Model simplifications". -/
 def accept [Field F] [AddCommGroup G] [Module F G] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
     (p : RecipientParameters F G PQPK PQSK SPK SSK S)

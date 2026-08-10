@@ -288,15 +288,53 @@ def uakeInitiator [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
   U := initiator P
   T := recipient P hasOPK
 
-def uakeRecipient [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
+def initiatorNoConfirm (P : Parameters SPK SSK S C Msg IdC IdK) :
+    Party ProbComp (InitiatorParameters SPK Msg)
+      (Message ECKey PQPK CT S C IdC IdK) (Option Key) where
+  State := InitiatorParameters SPK Msg ⊕ Key
+  init := fun p => pure (.waitForMsg (.inl p))
+  step := fun st w => match st, w with
+    | .inl p, .bundle b => do
+        match ← initiate P p b with
+        | some (im, ctx) => pure (.acceptAndSend (.inr ctx.sk) (.initial im) true)
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inr SK => pure (some (some SK))
+    | _ => pure none
+
+def recipientNoConfirm [DecidableEq IdC] [DecidableEq IdK]
+    (P : Parameters SPK SSK S C Msg IdC IdK) (hasOPK : Bool) :
+    Party ProbComp (RecipientIdentity SPK SSK S)
+      (Message ECKey PQPK CT S C IdC IdK) (Option Key) where
+  State := RecipientParameters SPK SSK S ⊕ Key
+  init := fun idn => do
+    let opkB ← genOPK P.ecKeygen hasOPK
+    let pqpkB ← P.pqKeygen
+    let p : RecipientParameters SPK SSK S :=
+      { ikB := idn.ikB, sigkB := idn.sigkB, spkB := idn.spkB, spkSigB := idn.spkSigB,
+        opkB := opkB, pqpkB := pqpkB }
+    let bundle ← publish P p
+    pure (.speakFirst (.inl p) (.bundle bundle))
+  step := fun st w => match st, w with
+    | .inl p, .initial im => do
+        match ← accept P p im with
+        | some ctx => pure (.complete (.inr ctx.sk))
+        | none => pure .reject
+    | _, _ => pure .reject
+  output := fun st => match st with
+    | .inl _ => pure none
+    | .inr SK => pure (some (some SK))
+
+def uakeRecipient [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool) :
     UAKE.Scheme ProbComp Key (RecipientIdentity SPK SSK S)
       (InitiatorParameters SPK Msg)
       (Message ECKey PQPK CT S C IdC IdK) where
-  rounds := 4
+  rounds := 2
   setup := Prod.swap <$> setup P msg
-  U := recipient P hasOPK
-  T := initiator P
+  U := recipientNoConfirm P hasOPK
+  T := initiatorNoConfirm P
 
 end
 
