@@ -27,7 +27,7 @@ noncomputable section
 
 variable {Rand SPK SSK S C Msg IdC IdK : Type}
 
-/-- The production extraction in the T=Bob direction has perfect UAKE
+/-- The high-fidelity extraction in the T=Bob direction has perfect UAKE
   correctness, assuming the KEM and AEAD are perfectly correct, the signature
   is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeInitiator_perfectlyCorrect
@@ -55,7 +55,7 @@ theorem uakeInitiator_perfectlyCorrect
   exact run_support_initiator P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
     hspkSigB hrun
 
-/-- The production extraction in the T=Alice direction has perfect UAKE
+/-- The high-fidelity extraction in the T=Alice direction has perfect UAKE
   correctness, assuming the KEM and AEAD are perfectly correct, the signature
   is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeRecipient_perfectlyCorrect

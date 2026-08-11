@@ -17,7 +17,6 @@ set_option doc.verso true
 
 - {Informal.citet PQXDHSpec}[]
 - {Informal.citet DF17}[]
-- {Informal.citet LS17}[]
 
 PQXDH is modeled as a DF'17-style UAKE.
 

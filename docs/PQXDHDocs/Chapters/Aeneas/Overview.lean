@@ -16,6 +16,7 @@ set_option doc.verso true
 *References:*
 
 - {Informal.citet PQXDHSpec}[]
+- {Informal.citet BAIFLibsignalVerify}[]
 
 PQXDH as a UAKE, instantiated with the Aeneas-extracted implementation.
 

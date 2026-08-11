@@ -180,7 +180,7 @@ Top-level UAKE security theorem for the simplified extraction, assuming the unde
 
 # Full
 
-This realization uses Signal's production `libsignal_protocol` crate, as extracted by Aeneas. The protocol orchestration (`pqxdh_initiate`, `pqxdh_accept`, key derivation) is extracted Rust; the cryptographic primitives (curve25519, ML-KEM, HKDF internals) remain opaque axioms.
+This realization uses Signal's `libsignal_protocol` crate, as extracted by Aeneas. The protocol orchestration (`pqxdh_initiate`, `pqxdh_accept`, key derivation) is extracted Rust; the cryptographic primitives (curve25519, ML-KEM, HKDF internals) remain opaque axioms.
 
 *Deviations from a pure "extracted code as UAKE" instantiation*
 

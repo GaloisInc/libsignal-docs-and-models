@@ -13,7 +13,7 @@ import ToVCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 /-!
 # PQXDH as a UAKE, Instantiated with the High-fidelity Aeneas Extraction
 
-This module realizes the Spec UAKE construction with Signal's production
+This module realizes the Spec UAKE construction with Signal's
 `libsignal_protocol` crate, as extracted by Aeneas. The protocol orchestration
 (`pqxdh_initiate`, `pqxdh_accept`, key derivation) is extracted Rust; the
 cryptographic primitives (curve25519, ML-KEM, HKDF internals) remain opaque

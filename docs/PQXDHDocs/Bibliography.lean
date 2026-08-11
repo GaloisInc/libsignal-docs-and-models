@@ -30,6 +30,17 @@ def LS17 : Verso.Genre.Manual.Bibliography.Citable := .inProceedings
   , booktitle := inlines!"ACM CCS 2017"
   , url := some "https://eprint.iacr.org/2017/117" }
 
+@[bib "BAIF"]
+def BAIFLibsignalVerify : Verso.Genre.Manual.Bibliography.Citable := .article
+  { title := inlines!"libsignal-verify"
+  , authors := #[inlines!"BAIF"]
+  , journal := inlines!"Beneficial AI Foundation, GitHub repository"
+  , year := 2026
+  , month := none
+  , volume := inlines!""
+  , number := inlines!""
+  , url := some "https://github.com/Beneficial-AI-Foundation/libsignal-verify" }
+
 @[bib "BS23"]
 def BS23 : Verso.Genre.Manual.Bibliography.Citable := .article
   { title := inlines!"A Graduate Course in Applied Cryptography"

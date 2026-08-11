@@ -36,7 +36,7 @@ noncomputable section
 
 variable {Rand SPK SSK S C Msg IdC IdK : Type}
 
-/-- Top-level UAKE security theorem for the production extraction, making no
+/-- Top-level UAKE security theorem for the high-fidelity extraction, making no
   assumptions about the underlying DH key exchange, but assuming the KEM is
   secure. This models UAKE security in the PQ setting. -/
 theorem uakeInitiator_secure_pq
@@ -107,7 +107,7 @@ theorem uakeInitiator_secure_pq
     εsig εkem εaead εkdf hverifyDet hkemCorrect hsig hkem haead
     (fun D => by rw [kdfPRF_specParams]; exact hkdf D)
 
-/-- Top-level UAKE security theorem for the production extraction, assuming
+/-- Top-level UAKE security theorem for the high-fidelity extraction, assuming
   the underlying DH key exchange is hard to break. This models UAKE security
   in the non-PQ setting. -/
 theorem uakeInitiator_secure_dh

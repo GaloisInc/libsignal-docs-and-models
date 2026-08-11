@@ -16,7 +16,6 @@ set_option doc.verso true
 *References:*
 
 - {Informal.citet DF17}[]
-- {Informal.citet LS17}[]
 
 The unilaterally-authenticated key exchange model shared by all three PQXDH realizations.
 
