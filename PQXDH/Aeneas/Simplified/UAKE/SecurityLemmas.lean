@@ -5,6 +5,15 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Simplified.UAKE.SecurityDefs
 
+/-!
+# Security Lemmas for the Simplified Extraction
+
+The bridge from the extracted scheme to the Spec model: under the clean-group
+model, each extracted party simulates its Spec counterpart, and the UAKE
+advantage transports along the simulation. The proofs in this file are
+AI-written.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 
 namespace PQXDH.Aeneas.Simplified

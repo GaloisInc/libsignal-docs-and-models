@@ -5,6 +5,13 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Simplified.UAKE.Defs
 
+/-!
+# Correctness Lemmas for the Simplified Extraction
+
+Supporting lemmas for `Correctness.lean`, characterizing the support of an
+honest run of the extracted scheme. The proofs in this file are AI-written.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 
 namespace PQXDH.Aeneas.Simplified

@@ -5,6 +5,14 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Simplified.UAKE.SecurityDefs
 
+/-!
+# Assumptions About the Simplified Extraction
+
+This module collects facts about the Rust implementation that appear to be
+true, but which are unprovable here due to gaps in the code model extracted by
+Aeneas. The lemmas and their explanations are AI-written.
+-/
+
 open OracleSpec OracleComp
 
 namespace PQXDH.Aeneas.Simplified

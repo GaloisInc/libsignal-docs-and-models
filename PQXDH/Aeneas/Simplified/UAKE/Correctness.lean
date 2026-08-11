@@ -5,6 +5,15 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Simplified.UAKE.CorrectnessLemmas
 
+/-!
+# Top-level Correctness Theorems for the Simplified Extraction
+
+Perfect UAKE correctness for both orientations of the extracted scheme,
+mirroring `PQXDH.Spec.UAKE.Correctness`. Correctness needs no group model; the
+only assumption about the opaque primitives is that X25519 agreement commutes
+on honestly generated key pairs (the `AgreeComm` hypothesis).
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 
 namespace PQXDH.Aeneas.Simplified
@@ -13,6 +22,9 @@ noncomputable section
 
 variable {SPK SSK S C Msg IdC IdK : Type}
 
+/-- The simplified extraction in the T=Bob direction has perfect UAKE
+  correctness, assuming the KEM and AEAD are perfectly correct, the signature
+  is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeInitiator_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool)
@@ -38,6 +50,9 @@ theorem uakeInitiator_perfectlyCorrect
   exact run_support_initiator P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
     hspkSigB hrun
 
+/-- The simplified extraction in the T=Alice direction has perfect UAKE
+  correctness, assuming the KEM and AEAD are perfectly correct, the signature
+  is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeRecipient_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool)

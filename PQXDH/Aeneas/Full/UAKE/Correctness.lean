@@ -6,6 +6,18 @@ Authors: Ben Hamlin
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Full.UAKE.CorrectnessDefs
 
+/-!
+# Top-level Correctness Theorems for the High-fidelity Aeneas Extraction
+
+Perfect UAKE correctness for both orientations of the extracted scheme,
+mirroring `PQXDH.Spec.UAKE.Correctness`. Correctness needs no group model; the
+only assumption about the opaque curve primitives is that X25519 agreement
+commutes on honestly generated key pairs (the `AgreeComm` hypothesis). The
+`_extractedSig` variants replace the abstract signature-completeness
+hypothesis with the `SigModel` hypothesis, discharging completeness via the
+extracted signature scheme.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
 
@@ -15,6 +27,9 @@ noncomputable section
 
 variable {Rand SPK SSK S C Msg IdC IdK : Type}
 
+/-- The production extraction in the T=Bob direction has perfect UAKE
+  correctness, assuming the KEM and AEAD are perfectly correct, the signature
+  is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeInitiator_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool)
@@ -40,6 +55,9 @@ theorem uakeInitiator_perfectlyCorrect
   exact run_support_initiator P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
     hspkSigB hrun
 
+/-- The production extraction in the T=Alice direction has perfect UAKE
+  correctness, assuming the KEM and AEAD are perfectly correct, the signature
+  is perfectly complete, and X25519 agreement commutes on honest key pairs. -/
 theorem uakeRecipient_perfectlyCorrect
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (msg : Msg) (hasOPK : Bool)
@@ -68,6 +86,8 @@ theorem uakeRecipient_perfectlyCorrect
   exact run_support_recipient P hasOPK hsig hkem haead hdh msg hikA hikB hsigkB hspkB
     hspkSigB hrun
 
+/-- `uakeInitiator_perfectlyCorrect`, with the signature scheme instantiated
+  by the extracted XEd25519 implementation via `SigModel`. -/
 theorem uakeInitiator_perfectlyCorrect_extractedSig
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)
@@ -82,6 +102,8 @@ theorem uakeInitiator_perfectlyCorrect_extractedSig
   rw [hsigModel.sig_eq]
   exact extractedSig_perfectlyComplete _ _ _ hsigModel.keygen_valid _
 
+/-- `uakeRecipient_perfectlyCorrect`, with the signature scheme instantiated
+  by the extracted XEd25519 implementation via `SigModel`. -/
 theorem uakeRecipient_perfectlyCorrect_extractedSig
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand ECPub ECPriv (Aeneas.Std.Slice Aeneas.Std.U8) C Msg IdC IdK)

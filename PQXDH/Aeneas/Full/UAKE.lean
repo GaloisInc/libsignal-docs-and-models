@@ -13,5 +13,5 @@ import PQXDH.Aeneas.Full.UAKE.SecurityLemmas
 import PQXDH.Aeneas.Full.UAKE.Security
 
 /-!
-# PQXDH as a UAKE, instantiated with the Aeneas extraction of `libsignal_protocol`
+# PQXDH as a UAKE, Instantiated with the High-fidelity Aeneas Extraction
 -/

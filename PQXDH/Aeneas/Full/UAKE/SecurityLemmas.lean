@@ -5,6 +5,15 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Aeneas.Full.UAKE.SecurityDefs
 
+/-!
+# Security Lemmas for the High-fidelity Aeneas Extraction
+
+The bridge from the extracted scheme to the Spec model: under the clean-group
+and KEM-pairing models, each extracted party simulates its Spec counterpart,
+and the UAKE advantage transports along the simulation. The proofs in this
+file are AI-written.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open libsignal_protocol
 

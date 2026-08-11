@@ -12,5 +12,5 @@ import PQXDH.Aeneas.Simplified.UAKE.SecurityLemmas
 import PQXDH.Aeneas.Simplified.UAKE.Security
 
 /-!
-# PQXDH as a UAKE, instantiated with the Aeneas-extracted implementation
+# PQXDH as a UAKE, Instantiated with the Simplified Aeneas-extracted Implementation
 -/
