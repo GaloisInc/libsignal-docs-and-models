@@ -5,6 +5,14 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Spec.UAKE.Defs
 
+/-!
+# Security Lemmas for Spec-based PQXDH
+
+Probability lemmas and ideal-world constructions supporting the (still
+sorry'd) top-level security theorems in `Security.lean`. The definitions and
+proofs in this file are AI-written.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open scoped ENNReal
 
@@ -12,6 +20,8 @@ namespace PQXDH
 
 variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
 
+/-- When the challenge key `K0` equals `K1`, the probabilities that `finalize`
+  accepts with `b = true` and with `b = false` sum to 1. -/
 lemma finalize_true_add_false_eq_one {K UK TK W : Type}
     [SampleableType K] [DecidableEq W] {proto : UAKE.Scheme ProbComp K UK TK W}
     (A : UAKE.Adversary proto) (st : A.State × UAKE.Env proto × TK)
@@ -36,6 +46,8 @@ lemma finalize_true_add_false_eq_one {K UK TK W : Type}
     · simp [probOutput_uniformSample, Fintype.card_bool, ENNReal.inv_two_add_inv_two]
   rw [← mul_add, hsum, mul_one]
 
+/-- When the challenge session produced no key, `finalize` on a uniform bit
+  accepts with probability exactly `1/2`. -/
 lemma finalize_none_half {K UK TK W : Type}
     [SampleableType K] [DecidableEq W] {proto : UAKE.Scheme ProbComp K UK TK W}
     (A : UAKE.Adversary proto) (st : A.State × UAKE.Env proto × TK)
@@ -44,6 +56,8 @@ lemma finalize_none_half {K UK TK W : Type}
   rw [probOutput_bind_uniformBool (fun b => UAKE.finalize ProbCompLift.id A st cr b none) true,
     finalize_true_add_false_eq_one A st cr none hK0]
 
+/-- Splitting a conditional coin flip: returning `true` when `c x` holds and a
+  uniform bit otherwise succeeds with probability `1/2 + Pr[c]/2`. -/
 lemma probOutput_bind_if_true_uniformBool {α : Type} (m : ProbComp α) (c : α → Bool) :
     Pr[= true | do let x ← m; if c x then (pure true : ProbComp Bool) else $ᵗ Bool] =
       1 / 2 + Pr[= true | do let x ← m; pure (c x)] / 2 := by
@@ -59,6 +73,8 @@ lemma probOutput_bind_if_true_uniformBool {α : Type} (m : ProbComp α) (c : α 
       rw [← mul_add, ENNReal.inv_two_add_inv_two, mul_one]
     simpa [probOutput_uniformSample, Fintype.card_bool] using hp
 
+/-- Ideal-world variant of `initiate`: the session and AEAD keys are drawn
+  uniformly at random instead of from the KDF. -/
 def initiateIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F] [DecidableEq G]
     [SampleableType K] [Fintype K] [Inhabited K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
@@ -78,6 +94,7 @@ def initiateIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F] [De
                  idPQPK := bundle.pqpkB.2, idOPK := bundle.opkB.map Prod.snd, ctxt := ctxt },
     { sk := SK, kb := KB, ad := AD, msg := p.msg })
 
+/-- If `initiateIdeal` accepts, both pre-key signatures verified. -/
 lemma initiateIdeal_verify_of_accept [Field F] [AddCommGroup G] [Module F G]
     [SampleableType F] [DecidableEq G] [SampleableType K] [Fintype K] [Inhabited K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
@@ -100,6 +117,8 @@ lemma initiateIdeal_verify_of_accept [Field F] [AddCommGroup G] [Module F G]
     · rename_i hcond
       cases okSPK <;> cases okPQPK <;> simp_all
 
+/-- Ideal-world variant of the `initiator` party, built on `initiateIdeal` and
+  outputting a uniformly random session key. -/
 def initiatorIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq Msg] [SampleableType K] [Fintype K] [Inhabited K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) :
@@ -121,6 +140,8 @@ def initiatorIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     | .inr (.inr _) => do let SK ← $ᵗ K; pure (some (some SK))
     | _ => pure none
 
+/-- If the ideal initiator accepts a bundle, both pre-key signatures
+  verified. -/
 lemma initiatorIdeal_step_bundle_verify [Field F] [AddCommGroup G] [Module F G]
     [SampleableType F] [DecidableEq G] [DecidableEq Msg] [SampleableType K] [Fintype K]
     [Inhabited K]
@@ -138,6 +159,7 @@ lemma initiatorIdeal_step_bundle_verify [Field F] [AddCommGroup G] [Module F G]
   | none => simp at hst
   | some imctx => exact initiateIdeal_verify_of_accept P p b hr
 
+/-- The ideal initiator produces a key only from its completed state. -/
 lemma initiatorIdeal_output_completed [Field F] [AddCommGroup G] [Module F G]
     [SampleableType F] [DecidableEq G] [DecidableEq Msg] [SampleableType K] [Fintype K]
     [Inhabited K]
@@ -155,6 +177,8 @@ lemma initiatorIdeal_output_completed [Field F] [AddCommGroup G] [Module F G]
                subst hy; simp at hjoin
     | inr SK => exact ⟨SK, rfl⟩
 
+/-- The T=Bob UAKE scheme with the initiator replaced by its ideal-world
+  variant. -/
 def uakeInitiatorIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [SampleableType K] [Fintype K] [Inhabited K]
     [DecidableEq G] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
@@ -167,6 +191,8 @@ def uakeInitiatorIdeal [Field F] [AddCommGroup G] [Module F G] [SampleableType F
   U := initiatorIdeal P
   T := recipient P hasOPK
 
+/-- Reinterpret an adversary against the real scheme as one against the ideal
+  scheme; the oracle interfaces coincide. -/
 def _root_.AKE.UAKE.Adversary.toIdeal
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [SampleableType K] [Fintype K] [Inhabited K]

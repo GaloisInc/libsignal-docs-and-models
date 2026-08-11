@@ -31,6 +31,8 @@ attribute [local simp]
   identity_key.IdentityKey.impl.public_key
   identityKeyPairOf identityKeyOf
 
+/-- `toKey` is injective on successful coercions: slices mapping to the same
+  32-byte key are equal. -/
 lemma toKey_inj {s₁ s₂ : Aeneas.Std.Slice Aeneas.Std.U8} {k : Key}
     (h₁ : toKey s₁ = some k) (h₂ : toKey s₂ = some k) : s₁ = s₂ := by
   unfold toKey at h₁ h₂
@@ -42,22 +44,29 @@ lemma toKey_inj {s₁ s₂ : Aeneas.Std.Slice Aeneas.Std.U8} {k : Key}
     · exact absurd h₂ (by simp)
   · exact absurd h₁ (by simp)
 
+/-- `getRes` of a doubly successful extracted call is `some` of its value. -/
 lemma getRes_eq_some {α : Type}
     {r : Aeneas.Std.Result (Aeneas.Std.core.result.Result α error.SignalProtocolError)}
     {x : α} (h : getRes r = some x) : r = .ok (.Ok x) := by
   unfold getRes at h
   split at h <;> simp_all
 
+/-- Output probabilities under the `probComp` runtime's `evalDist` coincide
+  with those of the computation itself. -/
 lemma probOutput_probComp_evalDist {α : Type} (oa : ProbComp α) (x : α) :
     Pr[= x | ProbCompRuntime.probComp.evalDist oa] = Pr[= x | oa] := by
   rfl
 
+/-- A Boolean computation that returns `true` with probability 1 has support
+  `{true}`. -/
 lemma support_eq_singleton_true_of_evalDist {oa : ProbComp Bool}
     (h : Pr[= true | ProbCompRuntime.probComp.evalDist oa] = 1) :
     support oa = {true} := by
   rw [probOutput_probComp_evalDist, probOutput_eq_one_iff] at h
   exact h.2
 
+/-- For a perfectly complete signature scheme, verifying an honestly generated
+  signature can only return `true`. -/
 lemma verify_eq_true_of_perfectlyComplete
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
@@ -74,6 +83,8 @@ lemma verify_eq_true_of_perfectlyComplete
   rw [h] at hmem
   exact hmem
 
+/-- For a perfectly correct AEAD, decryption inverts encryption under the same
+  key and associated data. -/
 lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
     (haead : AEAD.PerfectlyCorrect P.aead)
@@ -91,6 +102,8 @@ lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg]
   rw [h.2] at hmem
   simpa using hmem
 
+/-- Any key pair inside `genOPK`'s optional output is in the support of the
+  key generator. -/
 lemma opkB_mem_of_genOPK {P : Parameters Rand SPK SSK S C Msg IdC IdK}
     {hasOPK : Bool} {opkB : Option ECKeyPair}
     (h : opkB ∈ support (genOPK P hasOPK)) :
@@ -107,6 +120,9 @@ lemma opkB_mem_of_genOPK {P : Parameters Rand SPK SSK S C Msg IdC IdK}
       simp only [Option.mem_def, Option.some.injEq] at hx
       exact hx ▸ hopk
 
+/-- For a perfectly correct KEM, the extracted primitives round-trip: a
+  successful `encapsulate` on an honest key pair decapsulates to the same
+  shared secret. -/
 lemma kem_decapsulate_eq_ok
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
@@ -140,6 +156,8 @@ lemma kem_decapsulate_eq_ok
   obtain ⟨ss', hss', hkss'⟩ := Option.bind_eq_some_iff.mp hd
   rw [getRes_eq_some hss', toKey_inj hkss' hk]
 
+/-- An error residual never produces a successful result; rules out the
+  impossible `from_residual` branches when case-splitting extracted code. -/
 lemma from_residual_err_ne {E F T U : Type}
     (inst : Aeneas.Std.core.convert.From F E) (e : E) (c r : U) (x : T)
     (h : (do
@@ -149,6 +167,14 @@ lemma from_residual_err_ne {E F T U : Type}
   cases hf : Aeneas.Std.core.convert.From.from inst e <;> simp_all
 
 set_option maxHeartbeats 2000000 in
+-- The next proof cases on every step of the extracted `pqxdh_initiate` and
+-- `pqxdh_accept` pipelines, which exceeds the default elaboration budget. The
+-- long lines below are machine-generated instance names in `simp only` lists.
+set_option linter.style.longLine false in
+/-- The extracted round trip: if `pqxdh_initiate` succeeds, then
+  `pqxdh_accept` on the matching recipient inputs succeeds with the same
+  handshake keys, given DH commutativity for each key pair involved, KEM
+  round-tripping, and canonicality of the ephemeral key. -/
 lemma pqxdh_accept_eq_of_initiate_eq_ok
     (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
     (ikA ekA ikB spkB : ECKeyPair) (opkB : Option ECKeyPair)
@@ -292,8 +318,14 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
                 simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5,
                   hder] at hI
             | ok hk =>
-              simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, henc, hasr, hex5,
-                hder] at hI
+              simp only [hmul, hsl, core.result.Result.Insts.CoreOpsTry_traitTry.branch,
+                Aeneas.Std.core.result.Result.Insts.CoreOpsTry.branch, hd3, Option.map_none, henc,
+                core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual,
+                Aeneas.Std.core.result.Result.Insts.CoreOpsTryTraitFromResidualResultInfallible.from_residual,
+                Aeneas.Std.core.convert.FromSame.from, Aeneas.Std.bind_tc_ok,
+                Aeneas.Std.uncurry_apply_pair, hasr, hd2, hd1, hex1, hex2, hex3, hex4, hex5, hder,
+                Aeneas.Std.Result.ok.injEq, Prod.mk.injEq,
+                Aeneas.Std.core.result.Result.Ok.injEq] at hI
               obtain ⟨hag, -⟩ := hI
               subst hag
               simp [hex1, hex2, hex3, hex4, hex5, hder, hdh1, hdh2, hdh3,
@@ -354,14 +386,24 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
                       simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5,
                         henc, hasr, hex6, hder] at hI
                   | ok hk =>
-                    simp [hmul, hsl, hex1, hd1, hex2, hd2, hex3, hd3, hex4, hd4, hex5,
-                      henc, hasr, hex6, hder] at hI
+                    simp only [hmul, hsl, core.result.Result.Insts.CoreOpsTry_traitTry.branch,
+                      Aeneas.Std.core.result.Result.Insts.CoreOpsTry.branch, hd3, Option.map_some, hd4, henc,
+                      core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual,
+                      Aeneas.Std.core.result.Result.Insts.CoreOpsTryTraitFromResidualResultInfallible.from_residual,
+                      Aeneas.Std.core.convert.FromSame.from, Aeneas.Std.bind_tc_ok,
+                      Aeneas.Std.uncurry_apply_pair, hasr, hd2, hd1, hex1, hex2, hex3, hex4, hex5,
+                      hex6, hder, Aeneas.Std.Result.ok.injEq, Prod.mk.injEq,
+                      Aeneas.Std.core.result.Result.Ok.injEq] at hI
                     obtain ⟨hag, -⟩ := hI
                     subst hag
                     simp [hex1, hex2, hex3, hex4, hex5, hex6, hder, hdh1, hdh2,
                       hdh3, hdh4 opk rfl, hd1, hd2, hd3, hd4,
                       hkem ss ct csprng1 s1 henc hasr]
 
+/-- Characterization of the wrapper `initiate` on a pinned, correctly signed
+  bundle: every outcome is either `none` (the extracted call failed) or built
+  from an ephemeral key, coins, a successful `pqxdh_initiate`, and an AEAD
+  ciphertext from the corresponding supports. -/
 lemma mem_support_initiate
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
     {p : InitiatorParameters SPK Msg} {bundle : PreKeyBundle ECPub PQPub S IdC IdK}
@@ -438,6 +480,9 @@ lemma mem_support_initiate
       simp only [support_pure, Set.mem_singleton_iff] at hr
       exact Or.inl hr
 
+/-- The wrapper `accept` is deterministic once the extracted call is pinned:
+  with matching key identifiers, a successful `pqxdh_accept`, and a decrypting
+  ciphertext, it returns exactly the resulting session context. -/
 lemma accept_eq_pure_some
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
@@ -461,6 +506,8 @@ lemma accept_eq_pure_some
       (im.ikA, p.ikB.identity_key.public_key, p.pqpkB.public_key), m₀⟩) := by
   simp [accept, runAccept, getRes, hid₁, hid₂, hid₃, hacc, hdec]
 
+/-- The wrapper `accept` rejects whenever the extracted `pqxdh_accept` does
+  not succeed with keys. -/
 lemma accept_eq_pure_none
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK)
@@ -491,6 +538,8 @@ lemma accept_eq_pure_none
   | fail e => simp [accept, runAccept, getRes, hr]
   | div => simp [accept, runAccept, getRes, hr]
 
+/-- The extracted `pqxdh_accept` cannot succeed with keys when the ephemeral
+  key fails the canonicality check. -/
 lemma pqxdh_accept_ne_ok_some
     {rp : pqxdh.RecipientParameters} {res : Aeneas.Std.Result Bool}
     (hc : libsignal_core.curve.PublicKey.is_canonical rp.their_ephemeral_key = res)
@@ -510,6 +559,9 @@ lemma pqxdh_accept_ne_ok_some
   | fail e => simp at h
   | div => simp at h
 
+/-- Support characterization of an honest run of the T=Bob scheme: under the
+  correctness hypotheses, each party's output is ⊥, or the two outputs
+  coincide. -/
 lemma run_support_initiator
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (hasOPK : Bool)
@@ -536,8 +588,8 @@ lemma run_support_initiator
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
@@ -626,6 +678,9 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
         simp_all
 
+/-- Support characterization of an honest run of the T=Alice scheme: under the
+  correctness hypotheses, each party's output is ⊥, or the two outputs
+  coincide. -/
 lemma run_support_recipient
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters Rand SPK SSK S C Msg IdC IdK) (hasOPK : Bool)
@@ -652,8 +707,8 @@ lemma run_support_recipient
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
@@ -737,6 +792,9 @@ lemma run_support_recipient
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
         simp_all
 
+/-- Completeness of the extracted signature scheme, derived from
+  `extractedSig_signTotal` and `extractedSig_signVerify`: when the key
+  generator produces valid pairs, sign-then-verify always succeeds. -/
 lemma extractedSig_perfectlyComplete {Rand : Type}
     (rngInst : rand.rng.Rng Rand) (cryptoRngInst : rand_core_1.CryptoRng Rand)
     (coins : ProbComp Rand) {keygen : ProbComp ECKeyPair}

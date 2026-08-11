@@ -22,6 +22,8 @@ noncomputable section
 
 variable {SPK SSK S C Msg IdC IdK : Type}
 
+/-- The Spec-model parameters induced by the extracted primitives; the
+  reduction target of the security theorems. -/
 def specParams (P : Parameters SPK SSK S C Msg IdC IdK) (F : Type) (gen : ECKey) :
     _root_.PQXDH.Parameters F ECKey SS PQPK PQSK CT SPK SSK S C Msg Key IdC IdK where
   gen := gen
@@ -34,6 +36,8 @@ def specParams (P : Parameters SPK SSK S C Msg IdC IdK) (F : Type) (gen : ECKey)
 
 variable {F : Type}
 
+/-- Alice's extracted startup parameters induced by their Spec counterpart,
+  encoding private exponents with `privEnc`. -/
 def ukOfSpec (privEnc : F → Bytes 32#usize)
     (uk : _root_.PQXDH.InitiatorParameters F ECKey SPK Msg) :
     InitiatorParameters SPK Msg where
@@ -42,6 +46,7 @@ def ukOfSpec (privEnc : F → Bytes 32#usize)
   sigpkB := uk.sigpkB
   msg := uk.msg
 
+/-- Bob's extracted identity induced by its Spec counterpart. -/
 def tkOfSpec (privEnc : F → Bytes 32#usize)
     (tk : _root_.PQXDH.RecipientIdentity F ECKey SPK SSK S) :
     RecipientIdentity SPK SSK S where
@@ -50,6 +55,7 @@ def tkOfSpec (privEnc : F → Bytes 32#usize)
   spkB := kpOfPair privEnc tk.spkB
   spkSigB := tk.spkSigB
 
+/-- Bob's extracted startup parameters induced by their Spec counterpart. -/
 def rpOfSpec (privEnc : F → Bytes 32#usize)
     (rp : _root_.PQXDH.RecipientParameters F ECKey PQPK PQSK SPK SSK S) :
     RecipientParameters SPK SSK S where
@@ -66,12 +72,16 @@ section GroupModelBridge
 variable [Field F] [SampleableType F] [AddCommGroup ECKey] [Module F ECKey]
   (P : Parameters SPK SSK S C Msg IdC IdK) (gen : ECKey) (privEnc : F → Bytes 32#usize)
 
+/-- Under the group model, extracted OPK generation is the image of the Spec
+  model's. -/
 lemma genOPK_toSpec (hM : ECGroupModel P gen privEnc) (hasOPK : Bool) :
     genOPK P.ecKeygen hasOPK
       = Option.map (kpOfPair privEnc) <$> _root_.PQXDH.genOPK (F := F) gen hasOPK := by
   rw [hM.keygen_eq]
   cases hasOPK <;> simp [genOPK, _root_.PQXDH.genOPK, Functor.map_map]
 
+/-- Under the group model, extracted `setup` is the image of the Spec model's
+  `setup` under the state conversions. -/
 lemma setup_toSpec (hM : ECGroupModel P gen privEnc) (msg : Msg) :
     setup P msg
       = Prod.map (ukOfSpec privEnc) (tkOfSpec privEnc) <$>
@@ -80,6 +90,8 @@ lemma setup_toSpec (hM : ECGroupModel P gen privEnc) (msg : Msg) :
   rfl
 
 omit [Field F] [SampleableType F] [AddCommGroup ECKey] [Module F ECKey] in
+/-- Extracted `publish` computes the same bundle as the Spec model's on
+  converted parameters. -/
 lemma publish_toSpec
     (rp : _root_.PQXDH.RecipientParameters F ECKey PQPK PQSK SPK SSK S) :
     publish P (rpOfSpec privEnc rp) = _root_.PQXDH.publish (specParams P F gen) rp := by
@@ -88,10 +100,14 @@ lemma publish_toSpec
     simp [rpOfSpec, kpOfPair, hopk, specParams]
 
 omit [Field F] [SampleableType F] [AddCommGroup ECKey] [Module F ECKey] in
+/-- `kpOfPair` preserves the public key. -/
 lemma kpOfPair_public (p : ECKey × F) :
     (kpOfPair privEnc p).public_key = p.1 :=
   rfl
 
+/-- Under the group model, the extracted `pqxdh_initiate` succeeds, its DH
+  values are the Spec model's, and its handshake keys are the extracted KDF
+  applied to them. -/
 lemma pqxdh_initiate_groupModel (hM : ECGroupModel P gen privEnc)
     (p₁ p₂ : ECKey × F) (ikB spk : ECKey) (opk : Option ECKey) (pqpk : PQPK)
     (coins : Coins) {ss : SS} {ct : CT} {ks : Key × Key × Key}
@@ -151,6 +167,8 @@ lemma pqxdh_initiate_groupModel (hM : ECGroupModel P gen privEnc)
       subst hks
       simp [kpOfPair, hM.agree_eq, Aeneas.Std.lift, henc, hsi, hokm, hsplit]
 
+/-- Under the group model, the extracted `pqxdh_accept` succeeds and computes
+  the extracted KDF on the Spec model's DH values. -/
 lemma pqxdh_accept_groupModel (hM : ECGroupModel P gen privEnc)
     (q₁ q₂ : ECKey × F) (opkq : Option (ECKey × F)) (pqsk : PQSK)
     (ikA ekA : ECKey) (ct : CT) {ss : SS} {ks : Key × Key × Key}
@@ -210,6 +228,8 @@ lemma pqxdh_accept_groupModel (hM : ECGroupModel P gen privEnc)
       subst hks
       simp [kpOfPair, hM.canonical_eq, hM.agree_eq, Aeneas.Std.lift, hdec, hsi, hokm, hsplit]
 
+/-- Under the group model, the wrapper `initiate` equals the Spec model's
+  `initiate` on converted parameters, mapped through the state conversions. -/
 lemma initiate_toSpec (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
     (uk : _root_.PQXDH.InitiatorParameters F ECKey SPK Msg)
@@ -247,6 +267,8 @@ lemma initiate_toSpec (hM : ECGroupModel P gen privEnc)
     simp [henc, hks, getOk, kpOfPair]
   · simp [hpin]
 
+/-- Under the group model, the wrapper `accept` equals the Spec model's
+  `accept` on converted parameters, mapped through the state conversions. -/
 lemma accept_toSpec [DecidableEq IdC] [DecidableEq IdK]
     (hM : ECGroupModel P gen privEnc)
     (hkdfTotal : DeriveKeysTotal)
@@ -295,11 +317,14 @@ lemma accept_toSpec [DecidableEq IdC] [DecidableEq IdK]
         simp [pqkem, hdec]
 
 omit [Field F] [SampleableType F] [AddCommGroup ECKey] [Module F ECKey] in
+/-- `confirm` agrees with the Spec model's `confirm`. -/
 lemma confirm_toSpec [DecidableEq Msg]
     (ctx : SessionContext ECKey PQPK Msg Key) (conf : C) :
     confirm P ctx conf = _root_.PQXDH.confirm (specParams P F gen) ctx conf :=
   rfl
 
+/-- The extracted initiator's `init` agrees with the Spec initiator's on
+  converted inputs. -/
 lemma initiator_init_toSpec [DecidableEq Msg]
     (uk : _root_.PQXDH.InitiatorParameters F ECKey SPK Msg) :
     (initiator P).init (ukOfSpec privEnc uk)
@@ -307,6 +332,8 @@ lemma initiator_init_toSpec [DecidableEq Msg]
           (_root_.PQXDH.initiator (specParams P F gen)).init uk := by
   simp only [initiator, _root_.PQXDH.initiator, map_pure, Party.InitResult.map, Sum.map_inl]
 
+/-- The extracted initiator's `step` agrees with the Spec initiator's on
+  converted states. -/
 lemma initiator_step_toSpec [DecidableEq Msg]
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
@@ -334,6 +361,8 @@ lemma initiator_step_toSpec [DecidableEq Msg]
         cases _root_.PQXDH.confirm (specParams P F gen) ctx conf <;> simp [Party.StepResult.map]
   · cases w <;> simp [initiator, _root_.PQXDH.initiator, Party.StepResult.map]
 
+/-- The extracted initiator's `output` agrees with the Spec initiator's on
+  converted states. -/
 lemma initiator_output_toSpec [DecidableEq Msg]
     (st : _root_.PQXDH.InitiatorParameters F ECKey SPK Msg ⊕
       SessionContext ECKey PQPK Msg Key ⊕ Key) :
@@ -341,6 +370,8 @@ lemma initiator_output_toSpec [DecidableEq Msg]
       = (_root_.PQXDH.initiator (specParams P F gen)).output st := by
   rcases st with p | ctx | k <;> rfl
 
+/-- The extracted recipient's `init` agrees with the Spec recipient's on
+  converted inputs. -/
 lemma recipient_init_toSpec [DecidableEq IdC] [DecidableEq IdK]
     (hM : ECGroupModel P gen privEnc) (hasOPK : Bool)
     (tk : _root_.PQXDH.RecipientIdentity F ECKey SPK SSK S) :
@@ -359,6 +390,8 @@ lemma recipient_init_toSpec [DecidableEq IdC] [DecidableEq IdK]
   refine bind_congr fun bundle => ?_
   simp [Party.InitResult.map, rpOfSpec]
 
+/-- The extracted recipient's `step` agrees with the Spec recipient's on
+  converted states. -/
 lemma recipient_step_toSpec [DecidableEq IdC] [DecidableEq IdK]
     (hM : ECGroupModel P gen privEnc)
     (hkdfTotal : DeriveKeysTotal) (hasOPK : Bool)
@@ -378,6 +411,8 @@ lemma recipient_step_toSpec [DecidableEq IdC] [DecidableEq IdK]
     | confirmation c => simp [recipient, _root_.PQXDH.recipient, Party.StepResult.map]
   · cases w <;> simp [recipient, _root_.PQXDH.recipient, Party.StepResult.map]
 
+/-- The extracted recipient's `output` agrees with the Spec recipient's on
+  converted states. -/
 lemma recipient_output_toSpec [DecidableEq IdC] [DecidableEq IdK] (hasOPK : Bool)
     (st : _root_.PQXDH.RecipientParameters F ECKey PQPK PQSK SPK SSK S ⊕ Key) :
     (recipient P hasOPK).output (Sum.map (rpOfSpec privEnc) id st)
@@ -386,6 +421,8 @@ lemma recipient_output_toSpec [DecidableEq IdC] [DecidableEq IdK] (hasOPK : Bool
 
 variable {msg : Msg} {hasOPK : Bool}
 
+/-- Reinterpret an adversary against the extracted scheme as one against the
+  induced Spec scheme; the oracle interfaces coincide. -/
 def _root_.AKE.UAKE.Adversary.toSpec
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters SPK SSK S C Msg IdC IdK}
@@ -396,6 +433,7 @@ def _root_.AKE.UAKE.Adversary.toSpec
   challenge := fun uk w => A.challenge (ukOfSpec privEnc uk) w
   post := A.post
 
+/-- The `openT` query bound transfers to the reinterpreted adversary. -/
 lemma opensAtMost_toSpec
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters SPK SSK S C Msg IdC IdK}
@@ -403,6 +441,8 @@ lemma opensAtMost_toSpec
     (hq : A.OpensAtMost q) : (A.toSpec gen privEnc).OpensAtMost q :=
   ⟨fun uk w => hq.1 (ukOfSpec privEnc uk) w, hq.2⟩
 
+/-- Simulation of the extracted initiator by the Spec initiator, assembled
+  from the per-component `toSpec` lemmas. -/
 lemma initiator_sim [DecidableEq Msg]
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal) :
@@ -412,6 +452,8 @@ lemma initiator_sim [DecidableEq Msg]
   step_eq := initiator_step_toSpec P gen privEnc hM hencTotal hkdfTotal
   output_eq := initiator_output_toSpec P gen privEnc
 
+/-- Simulation of the extracted recipient by the Spec recipient, assembled
+  from the per-component `toSpec` lemmas. -/
 lemma recipient_sim [DecidableEq IdC] [DecidableEq IdK]
     (hM : ECGroupModel P gen privEnc) (hkdfTotal : DeriveKeysTotal) (hasOPK : Bool) :
     Party.Sim (_root_.PQXDH.recipient (specParams P F gen) hasOPK) (recipient P hasOPK)
@@ -420,13 +462,17 @@ lemma recipient_sim [DecidableEq IdC] [DecidableEq IdK]
   step_eq := recipient_step_toSpec P gen privEnc hM hkdfTotal hasOPK
   output_eq := recipient_output_toSpec P gen privEnc hasOPK
 
+/-- Under the group model, the UAKE experiment on the extracted scheme
+  coincides with the experiment on the induced Spec scheme against the
+  reinterpreted adversary. -/
 lemma exp_toSpec
     [DecidableEq S] [DecidableEq C] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters SPK SSK S C Msg IdC IdK}
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.Exp ProbCompRuntime.probComp.toProbCompLift A = UAKE.Exp ProbCompRuntime.probComp.toProbCompLift (A.toSpec gen privEnc) := by
+    UAKE.Exp ProbCompRuntime.probComp.toProbCompLift A
+      = UAKE.Exp ProbCompRuntime.probComp.toProbCompLift (A.toSpec gen privEnc) := by
   have hsetup : (uakeInitiator P msg hasOPK).setup
       = Prod.map (ukOfSpec privEnc) (tkOfSpec privEnc) <$>
         (_root_.PQXDH.uakeInitiator (specParams P F gen) msg hasOPK).setup :=
@@ -437,21 +483,28 @@ lemma exp_toSpec
     (initiator_sim P gen privEnc hM hencTotal hkdfTotal)
     (recipient_sim P gen privEnc hM hkdfTotal hasOPK) rfl hsetup A).trans rfl
 
+/-- Advantage transport: the extracted scheme's UAKE advantage equals the
+  induced Spec scheme's, for the reinterpreted adversary. -/
 lemma advantage_toSpec
     [DecidableEq S] [DecidableEq C] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     {P : Parameters SPK SSK S C Msg IdC IdK}
     (hM : ECGroupModel P gen privEnc)
     (hencTotal : EncapsTotalAll) (hkdfTotal : DeriveKeysTotal)
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) :
-    UAKE.advantage ProbCompRuntime.probComp A = UAKE.advantage ProbCompRuntime.probComp (A.toSpec gen privEnc) := by
+    UAKE.advantage ProbCompRuntime.probComp A
+      = UAKE.advantage ProbCompRuntime.probComp (A.toSpec gen privEnc) := by
   unfold UAKE.advantage
   rw [exp_toSpec gen privEnc hM hencTotal hkdfTotal A]
 
 omit [Field F] [SampleableType F] [AddCommGroup ECKey] [Module F ECKey] in
+/-- The PRF form of the induced Spec KDF is definitionally the extracted
+  `kdfPRF`. -/
 lemma kdfPRF_specParams {P : Parameters SPK SSK S C Msg IdC IdK} :
     _root_.PQXDH.kdfPRF (specParams P F gen) = kdfPRF :=
   rfl
 
+/-- PRF advantage against the induced Spec DH-keyed KDF equals that against
+  the extracted one. -/
 lemma kdfPRFDH_advantage_toSpec {P : Parameters SPK SSK S C Msg IdC IdK}
     (hM : ECGroupModel P gen privEnc)
     (D : PRFScheme.PRFAdversary (ECKey × ECKey × Option ECKey × SS) (Key × Key × Key)) :
@@ -468,6 +521,8 @@ lemma kdfPRFDH_advantage_toSpec {P : Parameters SPK SSK S C Msg IdC IdK}
   unfold PRFScheme.prfAdvantage
   rw [hreal]
 
+/-- The real nominal-DDH experiment against the induced Spec key generation
+  and DH function coincides with the experiment against the extracted ones. -/
 lemma nominalDDHExpReal_toSpec (hM : ECGroupModel P gen privEnc)
     (D : DiffieHellman.NominalDDHAdversary ECKey) :
     DiffieHellman.nominalDDHExpReal P.ecKeygen pqxdh.KeyPair.public_key x25519DH D
@@ -481,6 +536,8 @@ lemma nominalDDHExpReal_toSpec (hM : ECGroupModel P gen privEnc)
   refine bind_congr fun kpB => ?_
   simp [x25519DH, kpOfPair, hM.agree_eq, getOk, _root_.PQXDH.DH]
 
+/-- The random nominal-DDH experiment against the induced Spec key generation
+  and DH function coincides with the experiment against the extracted ones. -/
 lemma nominalDDHExpRand_toSpec (hM : ECGroupModel P gen privEnc)
     (D : DiffieHellman.NominalDDHAdversary ECKey) :
     DiffieHellman.nominalDDHExpRand P.ecKeygen pqxdh.KeyPair.public_key D
@@ -492,6 +549,8 @@ lemma nominalDDHExpRand_toSpec (hM : ECGroupModel P gen privEnc)
   simp only [bind_map_left]
   exact bind_congr fun kpA => bind_congr fun kpB => bind_congr fun kpC => rfl
 
+/-- DDH advantage transport between the extracted and the induced Spec
+  formulations of the nominal-DDH game. -/
 lemma ddh_advantage_toSpec {P : Parameters SPK SSK S C Msg IdC IdK}
     (hM : ECGroupModel P gen privEnc)
     (D : _root_.DiffieHellman.DDHAdversary F ECKey) :

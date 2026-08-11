@@ -20,16 +20,22 @@ noncomputable section
 
 variable {SPK SSK S C Msg IdC IdK : Type}
 
+/-- Output probabilities under the `probComp` runtime's `evalDist` coincide
+  with those of the computation itself. -/
 lemma probOutput_probComp_evalDist {α : Type} (oa : ProbComp α) (x : α) :
     Pr[= x | ProbCompRuntime.probComp.evalDist oa] = Pr[= x | oa] := by
   rfl
 
+/-- A Boolean computation that returns `true` with probability 1 has support
+  `{true}`. -/
 lemma support_eq_singleton_true_of_evalDist {oa : ProbComp Bool}
     (h : Pr[= true | ProbCompRuntime.probComp.evalDist oa] = 1) :
     support oa = {true} := by
   rw [probOutput_probComp_evalDist, probOutput_eq_one_iff] at h
   exact h.2
 
+/-- For a perfectly complete signature scheme, verifying an honestly generated
+  signature can only return `true`. -/
 lemma verify_eq_true_of_perfectlyComplete
     (P : Parameters SPK SSK S C Msg IdC IdK)
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
@@ -46,6 +52,9 @@ lemma verify_eq_true_of_perfectlyComplete
   rw [h] at hmem
   exact hmem
 
+/-- For a perfectly correct KEM, the opaque primitives round-trip: if
+  `mlkem_encapsulate` returns `(ss, ct)` on an honest key pair and honest
+  coins, then decapsulating `ct` yields `ss`. -/
 lemma mlkem_decapsulate_eq_ok
     (P : Parameters SPK SSK S C Msg IdC IdK)
     (hkem : (pqkem P).PerfectlyCorrect ProbCompRuntime.probComp)
@@ -79,6 +88,8 @@ lemma mlkem_decapsulate_eq_ok
       have := key none (by simp [pqkem, hdec])
       simp at this
 
+/-- For a perfectly correct AEAD, decryption inverts encryption under the same
+  key and associated data. -/
 lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg]
     (P : Parameters SPK SSK S C Msg IdC IdK)
     (haead : AEAD.PerfectlyCorrect P.aead)
@@ -96,6 +107,8 @@ lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg]
   rw [h.2] at hmem
   simpa using hmem
 
+/-- Any key pair inside `genOPK`'s optional output is in the support of the
+  key generator. -/
 lemma opkB_mem_of_genOPK {keygen : ProbComp pqxdh.KeyPair} {hasOPK : Bool}
     {opkB : Option pqxdh.KeyPair}
     (h : opkB ∈ support (genOPK keygen hasOPK)) :
@@ -112,6 +125,10 @@ lemma opkB_mem_of_genOPK {keygen : ProbComp pqxdh.KeyPair} {hasOPK : Bool}
       simp only [Option.mem_def, Option.some.injEq] at hx
       exact hx ▸ hopk
 
+/-- The extracted round trip: if `pqxdh_initiate` succeeds, then
+  `pqxdh_accept` on the matching recipient inputs succeeds with the same
+  handshake keys, given DH commutativity for each key pair involved, KEM
+  round-tripping, and canonicality of the ephemeral key. -/
 lemma pqxdh_accept_eq_of_initiate_eq_ok
     (ikA ekA ikB spkB : pqxdh.KeyPair) (opkB : Option pqxdh.KeyPair)
     (pqpk : PQPK) (pqsk : PQSK) (coins : Coins) (ag : pqxdh.InitiatorAgreement)
@@ -177,7 +194,8 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
       | div => simp [h1, h2, h3, henc, hsi, hokm, hsplit] at hI
       | ok keys =>
       obtain ⟨rk, ck, pk⟩ := keys
-      simp [h1, h2, h3, henc, hsi, hokm, hsplit] at hI
+      simp only [h1, h2, h3, henc, Option.map_none, Aeneas.Std.bind_tc_ok, bind_assoc,
+        Aeneas.Std.uncurry_apply_pair, hsi, hokm, hsplit, Aeneas.Std.Result.ok.injEq] at hI
       subst hI
       simp [hcanon, hdh1, hdh2, hdh3, h1, h2, h3, hdec, hsi, hokm, hsplit]
   | some opk =>
@@ -198,10 +216,15 @@ lemma pqxdh_accept_eq_of_initiate_eq_ok
       | div => simp [h1, h2, h3, henc, h4, hsi, hokm, hsplit] at hI
       | ok keys =>
       obtain ⟨rk, ck, pk⟩ := keys
-      simp [h1, h2, h3, henc, h4, hsi, hokm, hsplit] at hI
+      simp only [h1, h2, h3, henc, Option.map_some, h4, Aeneas.Std.bind_tc_ok, bind_assoc,
+        Aeneas.Std.uncurry_apply_pair, hsi, hokm, hsplit, Aeneas.Std.Result.ok.injEq] at hI
       subst hI
       simp [hcanon, hdh1, hdh2, hdh3, hdh4 opk rfl, h1, h2, h3, h4, hdec, hsi, hokm, hsplit]
 
+/-- Characterization of the wrapper `initiate` on a pinned, correctly signed
+  bundle: every outcome is either `none` (the extracted call failed) or built
+  from an ephemeral key, coins, a successful `pqxdh_initiate`, and an AEAD
+  ciphertext from the corresponding supports. -/
 lemma mem_support_initiate
     (P : Parameters SPK SSK S C Msg IdC IdK)
     {p : InitiatorParameters SPK Msg} {bundle : PreKeyBundle ECKey PQPK S IdC IdK}
@@ -257,6 +280,9 @@ lemma mem_support_initiate
       simp only [support_pure, Set.mem_singleton_iff] at hr
       exact Or.inl hr
 
+/-- The wrapper `accept` is deterministic once the extracted call is pinned:
+  with matching key identifiers, a successful `pqxdh_accept`, and a decrypting
+  ciphertext, it returns exactly the resulting session context. -/
 lemma accept_eq_pure_some
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK)
@@ -279,6 +305,8 @@ lemma accept_eq_pure_some
       (im.ikA, p.ikB.public_key, p.pqpkB.1), m₀⟩) := by
   simp [accept, hid₁, hid₂, hid₃, hacc, hdec]
 
+/-- The wrapper `accept` rejects whenever the extracted `pqxdh_accept` does
+  not succeed with keys. -/
 lemma accept_eq_pure_none
     [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK)
@@ -307,6 +335,8 @@ lemma accept_eq_pure_none
   | fail e => simp [accept, hr]
   | div => simp [accept, hr]
 
+/-- The extracted `pqxdh_accept` cannot succeed with keys when the ephemeral
+  key fails the canonicality check. -/
 lemma pqxdh_accept_ne_ok_some
     {rp : pqxdh.RecipientParameters} {res : Aeneas.Std.Result Bool}
     (hc : pqxdh.ec_is_canonical rp.their_ephemeral_key = res) (hres : res ≠ .ok true) :
@@ -322,6 +352,9 @@ lemma pqxdh_accept_ne_ok_some
   | fail e => simp at h
   | div => simp at h
 
+/-- Support characterization of an honest run of the T=Bob scheme: under the
+  correctness hypotheses, each party's output is ⊥, or the two outputs
+  coincide. -/
 lemma run_support_initiator
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK) (hasOPK : Bool)
@@ -346,8 +379,8 @@ lemma run_support_initiator
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
@@ -429,6 +462,9 @@ lemma run_support_initiator
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
         simp_all
 
+/-- Support characterization of an honest run of the T=Alice scheme: under the
+  correctness hypotheses, each party's output is ⊥, or the two outputs
+  coincide. -/
 lemma run_support_recipient
     [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters SPK SSK S C Msg IdC IdK) (hasOPK : Bool)
@@ -454,8 +490,8 @@ lemma run_support_recipient
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy

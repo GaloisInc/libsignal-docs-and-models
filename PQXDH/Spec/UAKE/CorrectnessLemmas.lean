@@ -5,6 +5,14 @@ Authors: Ben Hamlin
 -/
 import PQXDH.Spec.UAKE.Defs
 
+/-!
+# Correctness Lemmas for Spec-based PQXDH
+
+Supporting lemmas for `Correctness.lean`: probability-to-support reductions,
+round-trip facts for the abstract primitives, and characterizations of the
+support of an honest protocol run. The proofs in this file are AI-written.
+-/
+
 open OracleSpec OracleComp AKE AKE.UAKE
 open scoped ENNReal
 
@@ -14,16 +22,21 @@ variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
 
 section CorrectnessLemmas
 
+/-- Output probabilities under the `probComp` runtime's `evalDist` coincide
+  with those of the computation itself. -/
 lemma probOutput_probComp_evalDist {α : Type} (oa : ProbComp α) (x : α) :
     Pr[= x | ProbCompRuntime.probComp.evalDist oa] = Pr[= x | oa] := by
   rfl
 
+/-- A Boolean computation that returns `true` with probability 1 has support
+  `{true}`. -/
 lemma support_eq_singleton_true_of_evalDist {oa : ProbComp Bool}
     (h : Pr[= true | ProbCompRuntime.probComp.evalDist oa] = 1) :
     support oa = {true} := by
   rw [probOutput_probComp_evalDist, probOutput_eq_one_iff] at h
   exact h.2
 
+/-- Every key pair produced by `dhKeygen` satisfies `pk = sk • gen`. -/
 lemma fst_eq_smul_of_mem_support_dhKeygen
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F] {gen : G} {x : G × F}
     (hx : x ∈ support (dhKeygen (F := F) gen)) : x.1 = x.2 • gen := by
@@ -32,6 +45,8 @@ lemma fst_eq_smul_of_mem_support_dhKeygen
   obtain ⟨sk, rfl⟩ := hx
   rfl
 
+/-- For a perfectly complete signature scheme, verifying an honestly generated
+  signature can only return `true`. -/
 lemma verify_eq_true_of_perfectlyComplete
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
@@ -48,6 +63,8 @@ lemma verify_eq_true_of_perfectlyComplete
   rw [h] at hmem
   exact hmem
 
+/-- For a perfectly correct KEM, decapsulating an honestly produced ciphertext
+  can only return the encapsulated shared secret. -/
 lemma decaps_eq_some_of_perfectlyCorrect [DecidableEq SS]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
     (hkem : P.pqkem.PerfectlyCorrect ProbCompRuntime.probComp)
@@ -64,6 +81,8 @@ lemma decaps_eq_some_of_perfectlyCorrect [DecidableEq SS]
   rw [h] at hmem
   simpa using hmem
 
+/-- For a perfectly correct AEAD, decryption inverts encryption under the same
+  key and associated data. -/
 lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg] [SampleableType K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
     (haead : AEAD.PerfectlyCorrect P.aead)
@@ -81,6 +100,9 @@ lemma aead_decrypt_encrypt_of_perfectlyCorrect [DecidableEq Msg] [SampleableType
   rw [h.2] at hmem
   simpa using hmem
 
+/-- Characterization of `initiate` on a pinned, correctly signed bundle: every
+  outcome is `some`, built from an ephemeral key, an encapsulation, and an
+  AEAD ciphertext drawn from the corresponding primitives' supports. -/
 lemma mem_support_initiate
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F] [DecidableEq G]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
@@ -115,12 +137,16 @@ lemma mem_support_initiate
   obtain ⟨_, _, ekA, hekA, cs, hcs, ctxt, hctxt, rfl⟩ := hr
   exact ⟨ekA, hekA, cs, hcs, ctxt, hctxt, rfl⟩
 
+/-- DH agreement commutes on key pairs produced by `dhKeygen`. -/
 lemma dh_comm [Field F] [AddCommGroup G] [Module F G] [SampleableType F] {gen : G}
     {x y : G × F} (hx : x ∈ support (dhKeygen (F := F) gen))
     (hy : y ∈ support (dhKeygen (F := F) gen)) : DH x.2 y.1 = DH y.2 x.1 := by
   rw [fst_eq_smul_of_mem_support_dhKeygen hx, fst_eq_smul_of_mem_support_dhKeygen hy,
     DH, DH, smul_smul, smul_smul, mul_comm]
 
+/-- Characterization of `accept` when the key identifiers match,
+  decapsulation yields `ss`, and Alice's ciphertext decrypts: the only outcome
+  is the session context with the recomputed keys. -/
 lemma mem_support_accept
     [Field F] [AddCommGroup G] [Module F G] [DecidableEq IdC] [DecidableEq IdK]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK)
@@ -148,6 +174,8 @@ lemma mem_support_accept
   simp only [hdecr, support_pure, Set.mem_singleton_iff] at hr
   exact hr
 
+/-- Any key pair inside `genOPK`'s optional output is in the support of
+  `dhKeygen`. -/
 lemma opkB_mem_of_genOPK {F G : Type}
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     {gen : G} {hasOPK : Bool} {opkB : Option (G × F)}
@@ -165,6 +193,8 @@ lemma opkB_mem_of_genOPK {F G : Type}
       simp only [Option.mem_def, Option.some.injEq] at hx
       exact hx ▸ hopk
 
+/-- Support characterization of an honest run of the T=Bob scheme: under the
+  correctness hypotheses, both parties output `some` of the same key. -/
 lemma run_support_initiator
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
@@ -191,8 +221,8 @@ lemma run_support_initiator
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
@@ -238,6 +268,8 @@ lemma run_support_initiator
   obtain ⟨x, rfl, x1, rfl, h1, h2, -⟩ := hout
   exact ⟨_, h1, h2⟩
 
+/-- Support characterization of an honest run of the T=Alice scheme: under the
+  correctness hypotheses, both parties output `some` of the same key. -/
 lemma run_support_recipient
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
@@ -264,8 +296,8 @@ lemma run_support_recipient
   have hopkB := opkB_mem_of_genOPK hopkB_mem
   simp only [publish, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hbundle
   obtain ⟨σ₂, hσ₂, rfl⟩ := hbundle
-  simp only [Party.runHonestStart, Party.InitResult.opening, Party.InitResult.state,
-    mem_support_bind_iff] at hrun
+  simp only [Party.runHonestStart, Party.InitResult.opening,
+    Party.InitResult.state] at hrun
   obtain ⟨y, hy, hout⟩ := hrun
   simp only [Party.runHonestLoop, mem_support_bind_iff] at hy
   obtain ⟨r, ⟨ir, hir, hr⟩, hy⟩ := hy
