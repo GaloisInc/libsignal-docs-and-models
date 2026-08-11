@@ -199,10 +199,10 @@ move_references_to_bottom() {
 # mode "chrome" applies the combined-site HTML transforms; "raw" copies the
 # rendered manual untouched so its content is identical to a standalone render.
 chapters=(
+  "docs/annotated/Main.lean|Book|Signal-Protocols-Annotated|Signal Protocols, Annotated|Documentation Contents:|Documentation|raw"
   "docs/PQXDHDocs/Renderers/UAKEMain.lean|PQXDHDocs.Chapters.UAKE.Overview|UAKE-Model|The UAKE Model|UAKE Contents:|Models|chrome"
   "docs/PQXDHDocs/Renderers/SpecMain.lean|PQXDHDocs.Chapters.Spec.Overview|PQXDH-Specification|PQXDH Protocol Specification|Specification Contents:|Models|chrome"
   "docs/PQXDHDocs/Renderers/AeneasMain.lean|PQXDHDocs.Chapters.Aeneas.Overview|Aeneas-Extracted-PQXDH|Aeneas-Extracted PQXDH|Aeneas Contents:|Models|chrome"
-  "docs/annotated/Main.lean|Book|Signal-Protocols-Annotated|Signal Protocols, Annotated|Documentation Contents:|Documentation|raw"
 )
 
 rm -rf "$site_root" "$render_root"
@@ -264,6 +264,20 @@ cat > "$site_root/index.html" <<'HTML'
     }
     .section-intro a {
       color: var(--link);
+    }
+    .section-intro h3 {
+      margin: 18px 0 8px;
+      font-size: 1.15rem;
+    }
+    .section-intro ul {
+      margin: 0 0 10px;
+      padding-left: 22px;
+    }
+    .section-intro li {
+      margin: 0 0 8px;
+    }
+    .section-intro code {
+      font-size: 0.95em;
     }
     .chapter-list {
       display: grid;
@@ -674,14 +688,32 @@ cat > "$site_root/index.html" <<'HTML'
     <p class="subtitle">Formal models and documentation of cryptographic implementations in LibSignal</p>
 HTML
 
+# Landing-page intro for the Documentation section, mirroring the
+# "LibSignal Documentation" section of README.md.
+documentation_section_intro() {
+  cat <<'HTML'
+    <div class="section-intro">
+      <p>Verso documentation for the SPQR, Triple Ratchet, and PQXDH implementations in <a href="https://github.com/signalapp/libsignal">LibSignal</a>.</p>
+    </div>
+HTML
+}
+
 # Landing-page intro for the Models section, mirroring the first three
-# paragraphs of the "PQXDH Models" section of README.md.
+# paragraphs and the "AI Usage" subsection of the "PQXDH Models" section
+# of README.md.
 models_section_intro() {
   cat <<'HTML'
     <div class="section-intro">
       <p>Formal verification of Signal's PQXDH key-agreement protocol in Lean 4, built on top of <a href="https://github.com/Verified-zkEVM/VCV-io">VCVio</a>.</p>
       <p>The goal of this effort was to state (and ideally prove) game-based cryptographic security properties (via security definitions written using VCV-io) directly on models of the LibSignal Rust code, extracted using Aeneas. In order to do this, I first wrote a model of the unilaterally authenticated key exchange security notion from <a href="https://eprint.iacr.org/2017/109.pdf">DF'17</a>. Then I used two Aeneas-extracted code models to instantiate UAKE schemes and state a bound for each on adversarial advantage in the UAKE security game. Our UAKE definition is being considered for upstreaming into VCV-io (PR <a href="https://github.com/Verified-zkEVM/VCVio/pull/476">here</a>).</p>
       <p>Another goal was to avoid security proofs that are heavily dependent on the specific Rust implementation, so the proofs could be reused for multiple implementations. To this end, I also hand-wrote an implementation of PQXDH based on <a href="https://signal.org/docs/specifications/pqxdh">the spec</a>, along with UAKE correctness and security theorems. (The correctness theorems on the spec have proofs, but the security theorems are currently sorry'd.) Rather than trying to directly prove UAKE security on the extracted implementations, I had Claude use a game-hop to the spec-based implementation. These game hops were relatively easy for Claude to prove automatically, as opposed to the proofs for the spec. Ideally, a change to the code and the corresponding Aeneas-extracted model would only touch these game-hops, making the proofs easily repairable.</p>
+      <h3>AI Usage</h3>
+      <p>I used Claude-code in developing these Lean models and proofs in three different ways:</p>
+      <ul>
+        <li><strong>Security definitions, PQXDH spec model, and security theorems:</strong> Human-written AI-reviewed code. These are delicate definitions that are part of the trust-base of the project. I initially experimented with using Claude to define them, but I found that it tended to simplify things in ways that had significant security ramifications. The workflow I landed on eventually was to write the definitions myself, and then have Claude check my work for fidelity to the papers, e.g., by generating small examples or cross-referencing my definitions and comments with the paper. I was also able to use Claude for small mechanical changes here.</li>
+        <li><strong>UAKE instantiations:</strong> Highly supervised AI-written code. In this case, the task in Lean was mostly mechanical, and small enough that I could tractably check it by hand. I was able to have Claude write most of the definitions and carefully supervise the result.</li>
+        <li><strong>Proof-internal Lean code:</strong> AI-written code. I was able to offload this almost entirely onto Claude, with occasional suggestions from me. I restricted the code Claude was allowed to edit to the <code>*Lemmas.lean</code> files. In cases where Claude got stuck due to issues at the level of the model or theorem statement (e.g., when new hypotheses were needed or a bound needed to be loosened), I had it discuss the issue with me and then decided how to proceed.</li>
+      </ul>
     </div>
 HTML
 }
@@ -698,6 +730,8 @@ for chapter in "${chapters[@]}"; do
     printf '    <h2 class="chapter-section">%s</h2>\n' "$section" >> "$site_root/index.html"
     if [[ "$section" == "Models" ]]; then
       models_section_intro >> "$site_root/index.html"
+    elif [[ "$section" == "Documentation" ]]; then
+      documentation_section_intro >> "$site_root/index.html"
     fi
     printf '    <ul class="chapter-list">\n' >> "$site_root/index.html"
     current_section="$section"
