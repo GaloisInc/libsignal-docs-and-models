@@ -23,10 +23,8 @@ Deviations from a pure "extracted code as UAKE" statement
 * **Totality hypotheses:** `hencTotal` assumes the extracted encapsulation
   never fails, and `hkdfTotal` assumes the extracted KDF never fails.
 * **Inherited Spec simplifications:** the Spec theorems this reduces to are
-  still sorry-backed (the PQ theorem directly, the DH theorem through the
-  sorry'd game hops in `PQXDH.Spec.UAKE.SecurityLemmas`) and carry their own
-  simplifications (SUF-CMA signatures, the KDF as a PRF); see
-  `PQXDH.Spec.UAKE.Security`.
+  still sorry-backed and carry their own simplifications (SUF-CMA signatures,
+  the KDF as a PRF); see `PQXDH.Spec.UAKE.Security`.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -58,7 +56,7 @@ theorem uakeInitiator_secure_pq
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) (q : ℕ) (hq : A.OpensAtMost q)
     /- Probabilities bounding the adversary's advantage w/r/t PQXDH's component
       primitives. -/
-    (εsig εkem εaead εkdf : ℝ)
+    (εsig εkem εaead εkdf εpk : ℝ)
     /- We assume the signature scheme has a deterministic verification
       procedure. This holds in general for signature schemes, but VCV-io's
       signature scheme definition leaves it monadic, so this seems to be a
@@ -94,20 +92,26 @@ theorem uakeInitiator_secure_pq
         secret. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × ECPub × Option ECPub)
         (Key × Key × Key),
-      kdfPRF.prfAdvantage D ≤ εkdf) :
+      kdfPRF.prfAdvantage D ≤ εkdf)
+    /- Bound on the probability of guessing the public key output by the KEM's
+      key generation. This bounds KEM public-key collisions and predictions
+      across T-oracle sessions, which otherwise seem to break UAKE security. -/
+    (hpk : ∀ pk : PQPub, (Pr[= pk | Prod.fst <$> (pqkem P).keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying
       schemes, where the coefficients are small constants and the number q of
       sessions started with its T oracle. -/
-    UAKE.advantage ProbCompRuntime.probComp A ≤ 3 * εsig + q * (εkem + 3 * εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤
+      εsig + 2 * q * (εkem + εaead + εkdf) + 3 * (q : ℝ) ^ 2 * εpk := by
   obtain ⟨F, iField, iSamp, iGroup, iMod, gen, privEnc, hM⟩ := hGroupModel
   letI := iField; letI := iSamp; letI := iGroup; letI := iMod
   rw [advantage_toSpec gen privEnc hM.keygen_eq hM.agree_eq hM.canonical_eq hK.keygen_eq
     hencTotal hkdfTotal A]
   exact PQXDH.uakeInitiator_secure_pq (specParams P F gen) msg hasOPK hidKEM
     (A.toSpecFull gen privEnc) q (opensAtMost_toSpec gen privEnc A hq)
-    εsig εkem εaead εkdf hverifyDet hkemCorrect hsig hkem haead
+    εsig εkem εaead εkdf εpk hverifyDet hkemCorrect hsig hkem haead
     (fun D => by rw [kdfPRF_specParams]; exact hkdf D)
+    hpk
 
 /-- Top-level UAKE security theorem for the high-fidelity extraction, assuming
   the underlying DH key exchange is hard to break. This models UAKE security
@@ -171,10 +175,9 @@ theorem uakeInitiator_secure_dh
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECPub × ECPub × Option ECPub × Key)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf)
-    /- Bound on the probability of guessing the public key output by the
-      extracted KEM's key generation. This bounds KEM public-key collisions
-      and predictions across T-oracle sessions, which otherwise break UAKE
-      security outright; see `PQXDH.Spec.UAKE.SecurityLemmas`. -/
+    /- Bound on the probability of guessing the public key output by the KEM's
+      key generation. This bounds KEM public-key collisions and predictions
+      across T-oracle sessions, which otherwise seem to break UAKE security. -/
     (hpk : ∀ pk : PQPub, (Pr[= pk | Prod.fst <$> (pqkem P).keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying

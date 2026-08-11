@@ -89,7 +89,7 @@ theorem uakeInitiator_secure_dh
       (kdfPRFDH P).prfAdvantage D ≤ εkdf)
     /- Bound on the probability of guessing the public key output by the KEM's
       key generation. This bounds KEM public-key collisions and predictions
-      across T-oracle sessions, which otherwise break UAKE security. -/
+      across T-oracle sessions, which otherwise seem to break UAKE security. -/
     (hpk : ∀ pk : PQPK, (Pr[= pk | Prod.fst <$> P.pqkem.keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying
@@ -101,9 +101,10 @@ theorem uakeInitiator_secure_dh
   have h₁ := forgeProb_le_sigForge_add_pqpkGuessed_add_forgeHonestGood P msg hasOPK A
   have h₂ := sigForgeProb_le_sig P msg hasOPK A εsig hverifyDet hsig
   have h₃ := pqpkGuessedProb_le P msg hasOPK A q hq εpk hpk
-  have h₄ := forgeHonestGoodProb_le P msg hasOPK A q hq εgap εaead εkdf hidKEM hgap haead hkdf
-  have h₅ := indistAdvantage_le P msg hasOPK A q hq εgap εaead εkdf εpk hidKEM hgap haead
-    hkdf hpk
+  have h₄ := forgeHonestGoodProb_le_gap P msg hasOPK A q hq εgap εaead εkdf hidKEM hgap
+    haead hkdf
+  have h₅ := indistAdvantage_le_gap P msg hasOPK A q hq εgap εaead εkdf εpk hidKEM hgap
+    haead hkdf hpk
   have hεaead : (0 : ℝ) ≤ εaead :=
     le_trans ENNReal.toReal_nonneg (haead ⟨pure ()⟩)
   have hqa : (0 : ℝ) ≤ (q : ℝ) * εaead := mul_nonneg (Nat.cast_nonneg q) hεaead
@@ -125,7 +126,7 @@ theorem uakeInitiator_secure_pq
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) (q : ℕ) (hq : A.OpensAtMost q)
     /- Probabilities bounding the adversary's advantage w/r/t PQXDH's component
       primitives. -/
-    (εsig εkem εaead εkdf : ℝ)
+    (εsig εkem εaead εkdf εpk : ℝ)
     /- We assume the signature scheme has a deterministic verification
       procedure. This holds in general for signature schemes, but VCV-io's
       signature scheme definition leaves it monadic, so this seems to be a
@@ -158,12 +159,25 @@ theorem uakeInitiator_secure_pq
       * MODEL SIMPLIFICATION: We model the KDF as a PRF keyed by the KEM
         secret. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (G × G × G × Option G) (K × K × K),
-      (kdfPRF P).prfAdvantage D ≤ εkdf) :
+      (kdfPRF P).prfAdvantage D ≤ εkdf)
+    /- Bound on the probability of guessing the public key output by the KEM's
+      key generation. This bounds KEM public-key collisions and predictions
+      across T-oracle sessions, which otherwise seem to break UAKE security. -/
+    (hpk : ∀ pk : PQPK, (Pr[= pk | Prod.fst <$> P.pqkem.keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying
       schemes, where the coefficients are small constants and the number q of
       sessions started with its T oracle. -/
     UAKE.advantage ProbCompRuntime.probComp A ≤
-      3 * εsig + q * (εkem + 3 * εaead + εkdf) := sorry
+      εsig + 2 * q * (εkem + εaead + εkdf) + 3 * (q : ℝ) ^ 2 * εpk := by
+  have h₀ := advantage_le_forgeProb_add_indistAdvantage P msg hasOPK A
+  have h₁ := forgeProb_le_sigForge_add_pqpkGuessed_add_forgeHonestGood P msg hasOPK A
+  have h₂ := sigForgeProb_le_sig P msg hasOPK A εsig hverifyDet hsig
+  have h₃ := pqpkGuessedProb_le P msg hasOPK A q hq εpk hpk
+  have h₄ := forgeHonestGoodProb_le_pq P msg hasOPK A q hq εkem εaead εkdf hidKEM
+    hkemCorrect hkem haead hkdf
+  have h₅ := indistAdvantage_le_pq P msg hasOPK A q hq εkem εkdf εpk hidKEM hkemCorrect
+    hkem hkdf hpk
+  nlinarith [h₀, h₁, h₂, h₃, h₄, h₅]
 
 end PQXDH
