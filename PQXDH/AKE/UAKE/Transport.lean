@@ -41,6 +41,54 @@ structure Sim {m : Type → Type} [Functor m] {In₁ In₂ W Out : Type}
   step_eq : ∀ st w, P₂.step (σ st) w = StepResult.map σ <$> P₁.step st w
   output_eq : ∀ st, P₂.output (σ st) = P₁.output st
 
+section RunHonest
+
+variable {m : Type → Type} [Monad m] [LawfulMonad m] {W : Type}
+  {InP₁ InP₂ OutP InQ₁ InQ₂ OutQ : Type}
+  {P₁ : Party m InP₁ W OutP} {P₂ : Party m InP₂ W OutP}
+  {Q₁ : Party m InQ₁ W OutQ} {Q₂ : Party m InQ₂ W OutQ}
+  {fP : InP₁ → InP₂} {σP : P₁.State → P₂.State}
+  {fQ : InQ₁ → InQ₂} {σQ : Q₁.State → Q₂.State}
+
+lemma runHonestLoop_transport (hP : Sim P₁ P₂ fP σP) (hQ : Sim Q₁ Q₂ fQ σQ)
+    (fuel : ℕ) (pSt : P₁.State) (qSt : Q₁.State) (w : W) (turn : Bool) (sent : List W) :
+    runHonestLoop P₂ Q₂ fuel (σP pSt) (σQ qSt) w turn sent
+      = Prod.map σP (Prod.map σQ id) <$> runHonestLoop P₁ Q₁ fuel pSt qSt w turn sent := by
+  induction fuel generalizing pSt qSt w turn sent with
+  | zero => simp [runHonestLoop]
+  | succ n ih =>
+      cases turn with
+      | true =>
+          simp only [runHonestLoop, hQ.step_eq, bind_map_left, map_bind]
+          refine bind_congr fun r => ?_
+          cases r <;> simp [StepResult.map, ih]
+      | false =>
+          simp only [runHonestLoop, hP.step_eq, bind_map_left, map_bind]
+          refine bind_congr fun r => ?_
+          cases r <;> simp [StepResult.map, ih]
+
+lemma runHonestStart_transport (hP : Sim P₁ P₂ fP σP) (hQ : Sim Q₁ Q₂ fQ σQ)
+    (fuel : ℕ) (pInit : InitResult P₁.State W) (qInit : InitResult Q₁.State W) :
+    runHonestStart P₂ Q₂ fuel (InitResult.map σP pInit) (InitResult.map σQ qInit)
+      = Prod.map σP (Prod.map σQ id) <$> runHonestStart P₁ Q₁ fuel pInit qInit := by
+  cases pInit <;> cases qInit <;>
+    simp [runHonestStart, InitResult.map, runHonestLoop_transport hP hQ]
+
+lemma runHonest_transport (hP : Sim P₁ P₂ fP σP) (hQ : Sim Q₁ Q₂ fQ σQ)
+    (p : InP₁) (q : InQ₁) (fuel : ℕ) :
+    runHonest P₂ Q₂ (fP p) (fQ q) fuel = runHonest P₁ Q₁ p q fuel := by
+  unfold runHonest
+  simp only [hP.init_eq, hQ.init_eq, bind_map_left]
+  refine bind_congr fun pInit => ?_
+  refine bind_congr fun qInit => ?_
+  rw [runHonestStart_transport hP hQ]
+  simp only [bind_map_left]
+  refine bind_congr fun y => ?_
+  obtain ⟨pSt, qSt, ms⟩ := y
+  simp [hP.output_eq, hQ.output_eq]
+
+end RunHonest
+
 end Party
 
 section Transport
@@ -174,7 +222,7 @@ lemma simulateQ_oracleImpl_transport {α : Type}
       rcases t with i | op
       · simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
           OracleQuery.cont_query, id_map, oracleImpl, QueryImpl.add_apply_inl,
-          QueryImpl.liftTarget_apply, StateT.run_bind, map_bind]
+          StateT.run_bind, map_bind]
         erw [run_liftM_lift, run_liftM_lift]
         simp only [bind_assoc, pure_bind]
         exact bind_congr fun a => ih a e

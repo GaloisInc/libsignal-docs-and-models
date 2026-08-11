@@ -45,7 +45,8 @@ theorem uakeInitiator_perfectlyCorrect
   obtain ⟨ikA, hikA, ikB, hikB, sigkB, hsigkB, spkB, hspkB, spkSigB, hspkSigB,
     huk, htk⟩ := hsetup
   subst huk htk
-  exact run_support_initiator P hasOPK hsig hkem haead msg hikA hikB hsigkB hspkB hspkSigB hrun
+  exact (run_support_initiator P hasOPK hsig hkem haead msg hikA hikB hsigkB hspkB
+    hspkSigB hrun).1
 
 /-- Spec-based PQXDH in the T=Alice direction has perfect UAKE correctness,
   assuming the KEM and AEAD are perfectly correct and the signature is
@@ -78,6 +79,7 @@ theorem uakeRecipient_perfectlyCorrect
   simp only [Prod.swap_prod_mk, Prod.mk.injEq] at hswap
   obtain ⟨huk, htk⟩ := hswap
   subst huk htk
-  exact run_support_recipient P hasOPK hsig hkem haead msg hikA hikB hsigkB hspkB hspkSigB hrun
+  exact (run_support_recipient P hasOPK hsig hkem haead msg hikA hikB hsigkB hspkB
+    hspkSigB hrun).1
 
 end PQXDH

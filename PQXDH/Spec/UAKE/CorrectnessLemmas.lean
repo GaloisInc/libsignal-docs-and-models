@@ -194,7 +194,8 @@ lemma opkB_mem_of_genOPK {F G : Type}
       exact hx ▸ hopk
 
 /-- Support characterization of an honest run of the T=Bob scheme: under the
-  correctness hypotheses, both parties output `some` of the same key. -/
+  correctness hypotheses, both parties output `some` of the same key, and the
+  transcript carries exactly the scheme's 3 messages. -/
 lemma run_support_initiator
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
@@ -213,7 +214,7 @@ lemma run_support_initiator
     {uOut tOut : Option (Option K)} {ms : List (Message G PQPK CT S C IdC IdK)}
     (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (initiator P) (recipient P hasOPK)
       ⟨ikA, ikB.1, sigkB.1, msg⟩ ⟨ikB, sigkB, spkB, spkSigB⟩ (3 + 1))) :
-    ∃ k, uOut = some (some k) ∧ tOut = some (some k) := by
+    (∃ k, uOut = some (some k) ∧ tOut = some (some k)) ∧ ms.length = 3 := by
   simp only [Party.runHonest, initiator, recipient, mem_support_bind_iff, support_pure,
     Set.mem_singleton_iff] at hrun
   obtain ⟨pInit, rfl, qInit,
@@ -265,11 +266,12 @@ lemma run_support_initiator
   simp only [support_pure, Set.mem_singleton_iff] at hy
   subst hy
   simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-  obtain ⟨x, rfl, x1, rfl, h1, h2, -⟩ := hout
-  exact ⟨_, h1, h2⟩
+  obtain ⟨x, rfl, x1, rfl, h1, h2, hms⟩ := hout
+  exact ⟨⟨_, h1, h2⟩, by simp [hms]⟩
 
 /-- Support characterization of an honest run of the T=Alice scheme: under the
-  correctness hypotheses, both parties output `some` of the same key. -/
+  correctness hypotheses, both parties output `some` of the same key, and the
+  transcript carries exactly the scheme's 2 messages. -/
 lemma run_support_recipient
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
@@ -288,7 +290,7 @@ lemma run_support_recipient
     {uOut tOut : Option (Option K)} {ms : List (Message G PQPK CT S C IdC IdK)}
     (hrun : (uOut, tOut, ms) ∈ support (Party.runHonest (recipientNoConfirm P hasOPK)
       (initiatorNoConfirm P) ⟨ikB, sigkB, spkB, spkSigB⟩ ⟨ikA, ikB.1, sigkB.1, msg⟩ (2 + 1))) :
-    ∃ k, uOut = some (some k) ∧ tOut = some (some k) := by
+    (∃ k, uOut = some (some k) ∧ tOut = some (some k)) ∧ ms.length = 2 := by
   simp only [Party.runHonest, initiatorNoConfirm, recipientNoConfirm, mem_support_bind_iff,
     support_pure, Set.mem_singleton_iff] at hrun
   obtain ⟨pInit,
@@ -336,8 +338,8 @@ lemma run_support_recipient
   simp only [support_pure, Set.mem_singleton_iff] at hy
   subst hy
   simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hout
-  obtain ⟨x, rfl, x1, rfl, h1, h2, -⟩ := hout
-  exact ⟨_, h1, h2⟩
+  obtain ⟨x, rfl, x1, rfl, h1, h2, hms⟩ := hout
+  exact ⟨⟨_, h1, h2⟩, by simp [hms]⟩
 
 end CorrectnessLemmas
 

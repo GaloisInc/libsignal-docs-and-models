@@ -6,6 +6,8 @@ import PQXDH.Spec.Basic
 import PQXDH.Spec.UAKE.Defs
 import PQXDH.Spec.UAKE.CorrectnessLemmas
 import PQXDH.Spec.UAKE.Correctness
+import PQXDH.Spec.UAKE.WellFormedLemmas
+import PQXDH.Spec.UAKE.WellFormed
 import PQXDH.Spec.UAKE.SecurityLemmas
 import PQXDH.Spec.UAKE.Security
 import PQXDH.ToMathlib

@@ -8,6 +8,8 @@ import PQXDH.Aeneas.Full.UAKE.Assumptions
 import PQXDH.Aeneas.Full.UAKE.CorrectnessDefs
 import PQXDH.Aeneas.Full.UAKE.CorrectnessLemmas
 import PQXDH.Aeneas.Full.UAKE.Correctness
+import PQXDH.Aeneas.Full.UAKE.WellFormedLemmas
+import PQXDH.Aeneas.Full.UAKE.WellFormed
 import PQXDH.Aeneas.Full.UAKE.SecurityDefs
 import PQXDH.Aeneas.Full.UAKE.SecurityLemmas
 import PQXDH.Aeneas.Full.UAKE.Security

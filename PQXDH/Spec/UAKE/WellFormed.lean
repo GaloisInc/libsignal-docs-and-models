@@ -1,0 +1,56 @@
+/-
+Copyright (c) 2026 Galois Inc. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ben Hamlin
+-/
+import PQXDH.Spec.UAKE.WellFormedLemmas
+
+/-!
+# Well-formedness of the Spec Model's UAKE Schemes
+
+`UAKE.Scheme.WellFormed` for both orientations of the Spec-model scheme: each
+party produces output exactly when its protocol run completes, and an honest
+run transfers exactly `rounds` messages. The supporting lemmas live in
+`WellFormedLemmas.lean`.
+-/
+
+open OracleSpec OracleComp AKE AKE.UAKE
+
+namespace PQXDH
+
+variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
+
+theorem uakeInitiator_wellFormed
+    [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
+    [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
+    [DecidableEq SS] [DecidableEq Msg] [SampleableType K]
+    (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool)
+    (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
+    (hkem : P.pqkem.PerfectlyCorrect ProbCompRuntime.probComp)
+    (haead : AEAD.PerfectlyCorrect P.aead) :
+    (uakeInitiator P msg hasOPK).WellFormed := by
+  refine ⟨initiator_outputsOnlyAtCompletion P,
+    recipient_outputsOnlyAtCompletion P hasOPK, ?_⟩
+  intro uk tk hsetup uOut tOut ms hrun
+  exact runHonest_length_initiator P msg hasOPK hsig hkem haead hsetup hrun
+
+theorem uakeRecipient_wellFormed
+    [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
+    [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
+    [DecidableEq SS] [DecidableEq Msg] [SampleableType K]
+    (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool)
+    (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
+    (hkem : P.pqkem.PerfectlyCorrect ProbCompRuntime.probComp)
+    (haead : AEAD.PerfectlyCorrect P.aead) :
+    (uakeRecipient P msg hasOPK).WellFormed := by
+  refine ⟨recipientNoConfirm_outputsOnlyAtCompletion P hasOPK,
+    initiatorNoConfirm_outputsOnlyAtCompletion P, ?_⟩
+  intro uk tk hsetup uOut tOut ms hrun
+  replace hsetup : (uk, tk) ∈ support (Prod.swap <$> setup P msg) := hsetup
+  simp only [support_map, Set.mem_image, Prod.exists, Prod.swap_prod_mk,
+    Prod.mk.injEq] at hsetup
+  obtain ⟨uk₀, tk₀, hsetup₀, htk, huk⟩ := hsetup
+  subst huk htk
+  exact runHonest_length_recipient P msg hasOPK hsig hkem haead hsetup₀ hrun
+
+end PQXDH
