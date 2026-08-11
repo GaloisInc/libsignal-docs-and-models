@@ -50,7 +50,7 @@ Self::HeaderReceived(state) => {
 
 \[...\]
 
-We recommend using _GF(216)_ as the underlying field. {galoisnote}[This is what libsignal's SPQR uses itself: {spqr "src/encoding/gf.rs#L16"}[].] When using ML-KEM 768 [\[1\]](https://signal.org/docs/specifications/mlkembraid/#ref-kyberfips203) as the underlying KEM and 32-byte codewords, the largest message sent by the protocol is 36 codewords long. Thus to prevent ratcheting, an attacker must prevent 216 - 35 out of every 216 messages from being delivered. While this is not a complete denial of service, it requires blocking over 99.9% of messages and will likely cause protocol users to consider the underlying service to be unavailable.
+We recommend using _GF(2^16)_ as the underlying field. {galoisnote}[This is what libsignal's SPQR uses itself: {spqr "src/encoding/gf.rs#L16"}[].] When using ML-KEM 768 [\[1\]](https://signal.org/docs/specifications/mlkembraid/#ref-kyberfips203) as the underlying KEM and 32-byte codewords, the largest message sent by the protocol is 36 codewords long. Thus to prevent ratcheting, an attacker must prevent 216 - 35 out of every 216 messages from being delivered. While this is not a complete denial of service, it requires blocking over 99.9% of messages and will likely cause protocol users to consider the underlying service to be unavailable.
 
 \[...\]
 
