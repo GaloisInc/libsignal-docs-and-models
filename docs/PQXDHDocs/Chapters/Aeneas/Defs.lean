@@ -118,7 +118,7 @@ UAKE security of the extracted scheme is proved by reduction to the Spec theorem
 - **Clean-group model.** Both theorems assume some clean-group model for the opaque X25519 primitives (the `hGroupModel` hypothesis). This is a model idealization, not a believed-true fact.
 - **KDF totality.** The `hkdfTotal` hypothesis assumes the extracted KDF never fails.
 - **Encapsulation totality.** The proofs use the believed-true assumption `encapsTotalAll`.
-- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry'd and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
+- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
 
 :::defTitle "aeneas_simplified_security_defs" "Group model for the simplified extraction"
 :::
@@ -160,6 +160,8 @@ The bridge from the extracted scheme to the Spec model: under the clean-group mo
 ::::theorem "aeneas_simplified_security" (parent := "aeneas") (lean := "PQXDH.Aeneas.Simplified.uakeInitiator_secure_pq")
 Top-level UAKE security theorem for the simplified extraction, making no assumptions about the underlying DH key exchange, but assuming the KEM is secure. This models UAKE security in the PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
 
+Among the bounds is $`\varepsilon_{\mathrm{pk}}`, on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
+
 :::leanPill "partial"
 :::
 
@@ -171,6 +173,8 @@ Top-level UAKE security theorem for the simplified extraction, making no assumpt
 
 ::::theorem "aeneas_simplified_security_dh" (parent := "aeneas") (lean := "PQXDH.Aeneas.Simplified.uakeInitiator_secure_dh")
 Top-level UAKE security theorem for the simplified extraction, assuming the underlying DH key exchange is hard to break. This models UAKE security in the non-PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
+
+The DH assumption is a bound $`\varepsilon_{\mathrm{gap}}` on an adversary's advantage in the GapDH security game, stated over any field and group structure realizing the clean-group model (the witnesses of the `hGroupModel` hypothesis are not in scope for this hypothesis, so it quantifies over all of them). Among the other bounds is $`\varepsilon_{\mathrm{pk}}`, on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
 
 :::leanPill "partial"
 :::
@@ -302,7 +306,7 @@ UAKE security of the extracted scheme is proved by reduction to the Spec theorem
 - **Clean-group model.** Both theorems assume some clean-group model for the opaque curve25519 primitives (the `hGroupModel` hypothesis). This is a model idealization, not a believed-true fact.
 - **KEM pairing.** The `hK` hypothesis assumes the KEM key generator is the paired form of the extracted KEM's key generation.
 - **Totality hypotheses.** `hencTotal` assumes the extracted encapsulation never fails, and `hkdfTotal` assumes the extracted KDF never fails.
-- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry'd and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
+- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
 
 :::defTitle "aeneas_full_security_defs" "Group and KEM models for the high-fidelity extraction"
 :::
@@ -335,6 +339,8 @@ The bridge from the extracted scheme to the Spec model: under the clean-group an
 ::::theorem "aeneas_full_security" (parent := "aeneas") (lean := "PQXDH.Aeneas.Full.uakeInitiator_secure_pq")
 Top-level UAKE security theorem for the high-fidelity extraction, making no assumptions about the underlying DH key exchange, but assuming the KEM is secure. This models UAKE security in the PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
 
+Among the bounds is $`\varepsilon_{\mathrm{pk}}`, on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
+
 :::leanPill "partial"
 :::
 
@@ -346,6 +352,8 @@ Top-level UAKE security theorem for the high-fidelity extraction, making no assu
 
 ::::theorem "aeneas_full_security_dh" (parent := "aeneas") (lean := "PQXDH.Aeneas.Full.uakeInitiator_secure_dh")
 Top-level UAKE security theorem for the high-fidelity extraction, assuming the underlying DH key exchange is hard to break. This models UAKE security in the non-PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
+
+The DH assumption is a bound $`\varepsilon_{\mathrm{gap}}` on an adversary's advantage in the GapDH security game, stated over any field and group structure realizing the clean-group model (the witnesses of the `hGroupModel` hypothesis are not in scope for this hypothesis, so it quantifies over all of them). Among the other bounds is $`\varepsilon_{\mathrm{pk}}`, on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
 
 :::leanPill "partial"
 :::

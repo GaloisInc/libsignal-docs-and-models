@@ -161,7 +161,6 @@ We model UAKE security of the spec by bounding the adversary's advantage in the 
 - **SUF-CMA signature (not EUF-CMA).** Since UAKE is a transcript-matching-style definition, our security theorems are subject to harmless but definition-breaking "no-match" attacks on the signature scheme. See Li & Schäge, "No-Match Attacks and Robust Partnering Definitions" (ACM CCS 2017) for a reference on attacks of this kind.
 - **PQ-secure signature scheme.** In order to re-use our AKE definition in the post-quantum case, we assume that the signature scheme is *still secure*, even in the post-quantum setting. In reality, PQXDH uses an EC-based signature scheme, which is insecure against a quantum adversary. This is not a problem for the protocol, since the desired PQ security is security against HNDL attacks, which requires only secrecy, not integrity. However, UAKE cannot capture secrecy alone. A better way to model this kind of security would be to use a secrecy-only definition.
 - **Injective key→ID maps.** We assume that the function mapping KEM keys to identifiers is injective. Section 4.13 of the spec contains the weaker requirement that "collisions are unlikely". Modeling the maps as collision resistant would be an improvement, since it would allow a hash of the key to be used, but we leave that as a future improvement.
-- **DH assumption.** We currently state our DH assumption in the non-PQ theorem as DDH, whereas the spec assumes GapDH. The security proof probably won't go through without moving to GapDH, so we should switch this, but GapDH is not currently in VCV-io. We formalize it in the ToVCVio module, but haven't incorporated it here, yet.
 
 :::defTitle "spec_security_defs" "KDF models and adversary query bound"
 :::
@@ -172,11 +171,11 @@ The KDF modeled as a PRF, keyed either by a bitstring (e.g., the output of the K
 {usesLabel}`uses` {uses "spec_parameters"}[] · {uses "uake_adversary"}[]
 ::::
 
-:::defTitle "spec_ddh" "Nominal-group DDH assumption"
+:::defTitle "spec_ddh" "GapDH assumption"
 :::
 
-::::definition "spec_ddh" (parent := "spec") (lean := "PQXDH.DiffieHellman.nominalDDHDistAdvantage")
-Nominal-group DDH assumptions.
+::::definition "spec_ddh" (parent := "spec") (lean := "PQXDH.DiffieHellman.gapDHAdvantage")
+The GapDH security game and advantage. The non-PQ security theorem assumes a bound on an adversary's advantage in this game.
 ::::
 
 :::defTitle "spec_uake_security_dh" "UAKE security of PQXDH, non-PQ setting"
@@ -185,7 +184,7 @@ Nominal-group DDH assumptions.
 ::::theorem "spec_uake_security_dh" (parent := "spec") (lean := "PQXDH.uakeInitiator_secure_dh")
 Top-level UAKE security theorem for spec-based PQXDH, assuming the underlying DH key exchange is hard to break. This models UAKE security in the non-PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
 
-For any UAKE adversary who starts at most $`q` sessions with its T oracle, we assume: the function mapping KEM keys to key identifiers is injective; a bound $`\varepsilon_{\mathrm{sig}}` on an adversary's advantage in forging a signature; a bound $`\varepsilon_{\mathrm{ddh}}` on an adversary's advantage in the DH security game; a bound $`\varepsilon_{\mathrm{aead}}` on the adversary's advantage forging an AEAD ciphertext; and a bound $`\varepsilon_{\mathrm{kdf}}` on an adversary's distinguishing advantage for the KDF, modeled as a PRF. Since we key the KDF using DH group elements, we must also assume that the KDF is secure when keyed with one of these, rather than a random bit string.
+For any UAKE adversary who starts at most $`q` sessions with its T oracle, we assume: the function mapping KEM keys to key identifiers is injective; a bound $`\varepsilon_{\mathrm{sig}}` on an adversary's advantage in forging a signature; a bound $`\varepsilon_{\mathrm{gap}}` on an adversary's advantage in the DH security game; a bound $`\varepsilon_{\mathrm{aead}}` on the adversary's advantage forging an AEAD ciphertext; and a bound $`\varepsilon_{\mathrm{kdf}}` on an adversary's distinguishing advantage for the KDF, modeled as a PRF. Since we key the KDF using DH group elements, we must also assume that the KDF is secure when keyed with one of these, rather than a random bit string. We also assume a bound $`\varepsilon_{\mathrm{pk}}` on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
 
 We additionally assume the signature scheme has a deterministic verification procedure. This holds in general for signature schemes, but VCV-io's signature scheme definition leaves it monadic, so this seems to be a modeling gap.
 
@@ -201,7 +200,7 @@ We additionally assume the signature scheme has a deterministic verification pro
 ::::theorem "spec_uake_security" (parent := "spec") (lean := "PQXDH.uakeInitiator_secure_pq")
 Top-level UAKE security theorem for spec-based PQXDH, making no assumptions about the underlying DH key exchange, but assuming the KEM is secure. This models UAKE security in the PQ setting: the adversary's advantage in the UAKE game is bounded as a polynomial over the adversary bounds of the underlying schemes, where the coefficients are small constants and the number $`q` of sessions started with its T oracle.
 
-For any UAKE adversary who starts at most $`q` sessions with its T oracle, we assume: the function mapping KEM keys to key identifiers is injective; the KEM is perfectly correct; a bound $`\varepsilon_{\mathrm{sig}}` on an adversary's advantage in forging a signature; a bound $`\varepsilon_{\mathrm{kem}}` on an adversary's advantage in the IND-CCA game for the KEM; a bound $`\varepsilon_{\mathrm{aead}}` on the adversary's advantage forging an AEAD ciphertext; and a bound $`\varepsilon_{\mathrm{kdf}}` on an adversary's distinguishing advantage for the KDF, modeled as a PRF keyed by the KEM secret.
+For any UAKE adversary who starts at most $`q` sessions with its T oracle, we assume: the function mapping KEM keys to key identifiers is injective; the KEM is perfectly correct; a bound $`\varepsilon_{\mathrm{sig}}` on an adversary's advantage in forging a signature; a bound $`\varepsilon_{\mathrm{kem}}` on an adversary's advantage in the IND-CCA game for the KEM; a bound $`\varepsilon_{\mathrm{aead}}` on the adversary's advantage forging an AEAD ciphertext; and a bound $`\varepsilon_{\mathrm{kdf}}` on an adversary's distinguishing advantage for the KDF, modeled as a PRF keyed by the KEM secret. We also assume a bound $`\varepsilon_{\mathrm{pk}}` on the probability of guessing the public key output by the KEM's key generation; this bounds KEM public-key collisions and predictions across T-oracle sessions, which otherwise seem to break UAKE security.
 
 We additionally assume the signature scheme has a deterministic verification procedure. This holds in general for signature schemes, but VCV-io's signature scheme definition leaves it monadic, so this seems to be a modeling gap.
 
