@@ -203,7 +203,7 @@ We additionally assume the signature scheme has a deterministic verification pro
 :::leanPill "partial"
 :::
 
-{usesLabel}`uses` {uses "spec_uake"}[] · {uses "spec_ddh"}[] · {uses "spec_security_defs"}[] · {uses "uake_exp"}[]
+{usesLabel}`uses` {uses "spec_uake"}[] · {uses "spec_ddh"}[] · {uses "spec_security_defs"}[] · {uses "uake_exp"}[] · {uses "spec_lemma_advantage_le_forgeProb_add_indistAdvantage"}[] · {uses "spec_lemma_forgeProb_le_sigForge_add_pqpkGuessed_add_forgeHonestGood"}[] · {uses "spec_lemma_sigForgeProb_le_sig"}[] · {uses "spec_lemma_pqpkGuessedProb_le"}[] · {uses "spec_lemma_forgeHonestGoodProb_le_gap"}[] · {uses "spec_lemma_indistAdvantage_le_gap"}[]
 ::::
 
 :::defTitle "spec_uake_security" "UAKE security of PQXDH, PQ setting"
@@ -219,5 +219,5 @@ We additionally assume the signature scheme has a deterministic verification pro
 :::leanPill "partial"
 :::
 
-{usesLabel}`uses` {uses "spec_uake"}[] · {uses "spec_security_defs"}[] · {uses "uake_exp"}[]
+{usesLabel}`uses` {uses "spec_uake"}[] · {uses "spec_security_defs"}[] · {uses "uake_exp"}[] · {uses "spec_lemma_advantage_le_forgeProb_add_indistAdvantage"}[] · {uses "spec_lemma_forgeProb_le_sigForge_add_pqpkGuessed_add_forgeHonestGood"}[] · {uses "spec_lemma_sigForgeProb_le_sig"}[] · {uses "spec_lemma_pqpkGuessedProb_le"}[] · {uses "spec_lemma_forgeHonestGoodProb_le_pq"}[] · {uses "spec_lemma_indistAdvantage_le_pq"}[]
 ::::
