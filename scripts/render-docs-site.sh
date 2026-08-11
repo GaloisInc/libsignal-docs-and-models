@@ -195,11 +195,14 @@ move_references_to_bottom() {
   done < <(find "$chapter_dir" -name '*.html' -type f -print0)
 }
 
-# runner | overview module | output slug | site title | sidebar contents label
+# runner | overview module | output slug | site title | sidebar contents label | section | mode
+# mode "chrome" applies the combined-site HTML transforms; "raw" copies the
+# rendered manual untouched so its content is identical to a standalone render.
 chapters=(
-  "docs/PQXDHDocs/Renderers/UAKEMain.lean|PQXDHDocs.Chapters.UAKE.Overview|UAKE-Model|The UAKE Model|UAKE Contents:"
-  "docs/PQXDHDocs/Renderers/SpecMain.lean|PQXDHDocs.Chapters.Spec.Overview|PQXDH-Specification|PQXDH Protocol Specification|Specification Contents:"
-  "docs/PQXDHDocs/Renderers/AeneasMain.lean|PQXDHDocs.Chapters.Aeneas.Overview|Aeneas-Extracted-PQXDH|Aeneas-Extracted PQXDH|Aeneas Contents:"
+  "docs/PQXDHDocs/Renderers/UAKEMain.lean|PQXDHDocs.Chapters.UAKE.Overview|UAKE-Model|The UAKE Model|UAKE Contents:|Models|chrome"
+  "docs/PQXDHDocs/Renderers/SpecMain.lean|PQXDHDocs.Chapters.Spec.Overview|PQXDH-Specification|PQXDH Protocol Specification|Specification Contents:|Models|chrome"
+  "docs/PQXDHDocs/Renderers/AeneasMain.lean|PQXDHDocs.Chapters.Aeneas.Overview|Aeneas-Extracted-PQXDH|Aeneas-Extracted PQXDH|Aeneas Contents:|Models|chrome"
+  "docs/annotated/Main.lean|Book|Signal-Protocols-Annotated|Signal Protocols, Annotated|Documentation Contents:|Documentation|raw"
 )
 
 rm -rf "$site_root" "$render_root"
@@ -248,6 +251,10 @@ cat > "$site_root/index.html" <<'HTML'
       max-width: none;
       color: var(--muted);
       font-size: 1.05rem;
+    }
+    .chapter-section {
+      margin: 26px 0 10px;
+      font-size: 1.45rem;
     }
     .chapter-list {
       display: grid;
@@ -654,26 +661,37 @@ cat > "$site_root/index.html" <<'HTML'
 </head>
 <body>
   <main>
-    <h1>PQXDH</h1>
+    <h1>LibSignal Documentation and Models</h1>
     <p class="subtitle">Formal verification of Signal's PQXDH key-agreement protocol in Lean</p>
-    <ul class="chapter-list">
 HTML
 
+current_section=""
 for chapter in "${chapters[@]}"; do
-  IFS='|' read -r runner module slug title contents_label <<< "$chapter"
+  IFS='|' read -r runner module slug title contents_label section mode <<< "$chapter"
   echo "Rendering $title"
+
+  if [[ "$section" != "$current_section" ]]; then
+    if [[ -n "$current_section" ]]; then
+      printf '    </ul>\n' >> "$site_root/index.html"
+    fi
+    printf '    <h2 class="chapter-section">%s</h2>\n    <ul class="chapter-list">\n' "$section" >> "$site_root/index.html"
+    current_section="$section"
+  fi
 
   # Render one chapter manual into a temporary directory, then copy only its
   # html-multi output into the assembled site. The helpers below normalize each
-  # standalone manual so it behaves like one chapter of the combined site.
+  # standalone manual so it behaves like one chapter of the combined site;
+  # "raw" chapters are copied untouched.
   out_dir="$render_root/$slug"
   lake build PQXDHDocs.Render "$module"
   lake env lean --run "$runner" --output "$out_dir"
   mkdir -p "$site_root/$slug"
   cp -R "$out_dir/html-multi/." "$site_root/$slug/"
-  add_project_index_links "$site_root/$slug" "$contents_label"
-  move_references_to_bottom "$site_root/$slug"
-  remove_generated_manual_titlepage "$site_root/$slug/index.html"
+  if [[ "$mode" != "raw" ]]; then
+    add_project_index_links "$site_root/$slug" "$contents_label"
+    move_references_to_bottom "$site_root/$slug"
+    remove_generated_manual_titlepage "$site_root/$slug/index.html"
+  fi
   printf '      <li><div class="chapter-row"><a class="chapter-title" href="%s/">%s</a></div></li>\n' "$slug" "$title" >> "$site_root/index.html"
 done
 

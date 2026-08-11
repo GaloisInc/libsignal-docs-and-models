@@ -37,6 +37,14 @@ name = "PQXDH"
 name = "PQXDHDocs"
 srcDir = "docs"
 
+[[lean_lib]]
+name = "Book"
+srcDir = "docs/annotated"
+
+[lean_lib.leanOptions]
+autoImplicit = true
+relaxedAutoImplicit = true
+
 [[lean_exe]]
 name = "pqxdhDocs"
 root = "PQXDHDocsMain"

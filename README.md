@@ -1,5 +1,9 @@
 Live Verso documentation site here: https://galoisinc.github.io/libsignal-docs-and-models/
 
+# LibSignal Documentation
+
+Verso documentation for the SPQR, Tripple Ratchet, and PQXDH implementations in [LibSignal](https://github.com/signalapp/libsignal).
+
 # PQXDH Models
 
 Formal verification of Signal's PQXDH key-agreement protocol in Lean 4, built on top of
