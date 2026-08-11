@@ -20,11 +20,14 @@ namespace PQXDH
 
 variable {F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK : Type}
 
+/-- The extracted T=Bob scheme is well-formed: both parties output only at
+  completion, and an honest run transfers exactly 3 messages. -/
 theorem uakeInitiator_wellFormed
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
     [DecidableEq SS] [DecidableEq Msg] [SampleableType K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool)
+
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
     (hkem : P.pqkem.PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead) :
@@ -34,6 +37,8 @@ theorem uakeInitiator_wellFormed
   intro uk tk hsetup uOut tOut ms hrun
   exact runHonest_length_initiator P msg hasOPK hsig hkem haead hsetup hrun
 
+/-- The extracted T=Alice scheme is well-formed: both parties output only at
+  completion, and an honest run transfers exactly 2 messages. -/
 theorem uakeRecipient_wellFormed
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]

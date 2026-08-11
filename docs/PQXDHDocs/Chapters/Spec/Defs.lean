@@ -6,6 +6,7 @@ import PQXDHDocs.Visuals.AnchorPill
 import PQXDHDocs.Bibliography
 import PQXDH.Spec.UAKE.Defs
 import PQXDH.Spec.UAKE.Correctness
+import PQXDH.Spec.UAKE.WellFormed
 import PQXDH.Spec.UAKE.Security
 import ToVCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
@@ -149,6 +150,17 @@ Spec-based PQXDH in the T=Bob direction has perfect UAKE correctness, assuming t
 Spec-based PQXDH in the T=Alice direction has perfect UAKE correctness, assuming the KEM and AEAD are perfectly correct and the signature is perfectly complete (i.e., never fails on an honestly generated signature, when paired with the message used to generate it).
 
 {usesLabel}`uses` {uses "spec_uake_recipient"}[] · {uses "uake_perfectly_correct"}[]
+::::
+
+# Well-formedness
+
+:::defTitle "spec_uake_wellformed" "Well-formedness of PQXDH as a UAKE"
+:::
+
+::::theorem "spec_uake_wellformed" (parent := "spec") (lean := "PQXDH.uakeInitiator_wellFormed, PQXDH.uakeRecipient_wellFormed")
+Both orientations of the Spec-model scheme are well-formed, assuming the KEM and AEAD are perfectly correct and the signature is perfectly complete: each party produces output exactly when its protocol run completes, and an honest run transfers exactly `rounds` messages (3 in the T=Bob direction, 2 in the T=Alice direction).
+
+{usesLabel}`uses` {uses "spec_uake"}[] · {uses "spec_uake_recipient"}[] · {uses "uake_scheme_wellformed"}[]
 ::::
 
 # Security

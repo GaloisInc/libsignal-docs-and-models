@@ -111,6 +111,17 @@ The simplified extraction in the T=Alice direction has perfect UAKE correctness,
 {usesLabel}`uses` {uses "aeneas_simplified_recipient"}[] · {uses "uake_perfectly_correct"}[]
 ::::
 
+:::defTitle "aeneas_simplified_wellformed" "Well-formedness of the simplified extraction"
+:::
+
+::::theorem "aeneas_simplified_wellformed" (parent := "aeneas") (lean := "PQXDH.Aeneas.Simplified.uakeInitiator_wellFormed, PQXDH.Aeneas.Simplified.uakeRecipient_wellFormed")
+Both orientations of the extracted scheme are well-formed: each party produces output exactly when its protocol run completes, and an honest run transfers exactly `rounds` messages (3 in the T=Bob direction, 2 in the T=Alice direction). The output conditions are unconditional facts about the party state machines.
+
+*Model idealization:* the round-count condition requires every step of an honest run to succeed, which cannot be established for the opaque primitives without the clean-group idealization. It assumes the clean-group model `ECGroupModel` (as in the security theorems), KDF totality, and the correctness hypotheses, since an honest run completes only when no opaque primitive fails; the proof transfers the honest run to the Spec model along the party simulations.
+
+{usesLabel}`uses` {uses "aeneas_simplified_model"}[] · {uses "aeneas_simplified_recipient"}[] · {uses "aeneas_simplified_security_defs"}[] · {uses "aeneas_simplified_assumptions"}[] · {uses "uake_scheme_wellformed"}[]
+::::
+
 UAKE security of the extracted scheme is proved by reduction to the Spec theorems: under the group model, the extracted scheme's advantage equals that of the Spec scheme instantiated with the extracted primitives, so the Spec bounds apply.
 
 *Deviations from a pure "extracted code as UAKE" statement*
@@ -297,6 +308,17 @@ The high-fidelity extraction in the T=Bob direction has perfect UAKE correctness
 The high-fidelity extraction in the T=Alice direction has perfect UAKE correctness, assuming the KEM and AEAD are perfectly correct, the signature is perfectly complete, and X25519 agreement commutes on honest key pairs. The `_extractedSig` variant replaces the abstract signature-completeness hypothesis with the `SigModel` hypothesis, discharging completeness via the extracted signature scheme.
 
 {usesLabel}`uses` {uses "aeneas_full_recipient"}[] · {uses "aeneas_full_correctness_defs"}[] · {uses "aeneas_full_assumptions"}[] · {uses "uake_perfectly_correct"}[]
+::::
+
+:::defTitle "aeneas_full_wellformed" "Well-formedness of the high-fidelity extraction"
+:::
+
+::::theorem "aeneas_full_wellformed" (parent := "aeneas") (lean := "PQXDH.Aeneas.Full.uakeInitiator_wellFormed, PQXDH.Aeneas.Full.uakeRecipient_wellFormed")
+Both orientations of the extracted scheme are well-formed: each party produces output exactly when its protocol run completes, and an honest run transfers exactly `rounds` messages (3 in the T=Bob direction, 2 in the T=Alice direction). The output conditions are unconditional facts about the party state machines.
+
+*Model idealization:* the round-count condition requires every step of an honest run to succeed, which cannot be established for the opaque primitives without the clean-group idealization. It assumes the clean-group model `ECGroupModel` and the KEM pairing `KemPairModel` (as in the security theorems), the totality hypotheses, and the correctness hypotheses, since an honest run completes only when no opaque primitive fails; the proof transfers the honest run to the Spec model along the party simulations.
+
+{usesLabel}`uses` {uses "aeneas_full_model"}[] · {uses "aeneas_full_recipient"}[] · {uses "aeneas_full_security_defs"}[] · {uses "aeneas_full_assumptions"}[] · {uses "uake_scheme_wellformed"}[]
 ::::
 
 UAKE security of the extracted scheme is proved by reduction to the Spec theorems: under the group and KEM-pairing models, the extracted scheme's advantage equals that of the Spec scheme instantiated with the extracted primitives, so the Spec bounds apply.
