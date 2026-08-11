@@ -3,7 +3,7 @@ Copyright (c) 2026 Galois Inc. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ben Hamlin
 -/
-import PQXDH.Spec.UAKE.Defs
+import PQXDH.Spec.UAKE.SecurityLemmas
 
 /-!
 # Security Theorems for PQXDH Spec-based Implementation
@@ -38,11 +38,6 @@ Model simplifications
   requirement that "collisions are unlikely". Modeling the maps as collision
   resistant would be an improvement, since it would allow a hash of the key to
   be used, but we leave that as a future improvement.
-* **DH assumption:** We currently state our DH assumption in the non-PQ theorem
-  as DDH, whereas the spec assumes GapDH. The security proof probably won't go
-  through without moving to GapDH, so we should switch this, but GapDH is not
-  currently in VCV-io. We formalize it in the `ToVCVio` module, but haven't
-  incorporated it here, yet.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -67,7 +62,7 @@ theorem uakeInitiator_secure_dh
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) (q : ℕ) (hq : A.OpensAtMost q)
     /- Probabilities bounding the adversary's advantage w/r/t PQXDH's component
       primitives. -/
-    (εsig εddh εaead εkdf : ℝ)
+    (εsig εgap εaead εkdf εpk : ℝ)
     /- We assume the signature scheme has a deterministic verification
       procedure. This holds in general for signature schemes, but VCV-io's
       signature scheme definition leaves it monadic, so this seems to be a
@@ -80,8 +75,8 @@ theorem uakeInitiator_secure_dh
     (hsig : ∀ B : P.sig.unforgeableAdv,
       (B.strongAdvantage ProbCompRuntime.probComp).toReal ≤ εsig)
     /- Bound on an adversary's advantage in the DH security game. -/
-    (hddh : ∀ D : DiffieHellman.DDHAdversary F G,
-      DiffieHellman.ddhDistAdvantage P.gen D ≤ εddh)
+    (hgap : ∀ D : DiffieHellman.GapDHAdversary F G,
+      DiffieHellman.gapDHAdvantage P.gen D ≤ εgap)
     /- Bound on the adversary's advantage forging an AEAD ciphertext. -/
     (haead : ∀ B : AEAD.INT_CTXT_D_Adversary P.aead,
       AEAD.INT_CTXT_D_Advantage P.aead B ≤ εaead)
@@ -91,12 +86,28 @@ theorem uakeInitiator_secure_dh
         using DH group elements, we must also assume that the KDF is secure
         when keyed with one of these, rather than a random bit string. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (G × G × Option G × SS) (K × K × K),
-      (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
+      (kdfPRFDH P).prfAdvantage D ≤ εkdf)
+    /- Bound on the probability of guessing the public key output by the KEM's
+      key generation. This bounds KEM public-key collisions and predictions
+      across T-oracle sessions, which otherwise break UAKE security. -/
+    (hpk : ∀ pk : PQPK, (Pr[= pk | Prod.fst <$> P.pqkem.keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying
       schemes, where the coefficients are small constants and the number q of
       sessions started with its T oracle. -/
-    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := sorry
+    UAKE.advantage ProbCompRuntime.probComp A ≤
+      εsig + 2 * q * (εgap + 2 * εaead + εkdf) + 3 * (q : ℝ) ^ 2 * εpk := by
+  have h₀ := advantage_le_forgeProb_add_indistAdvantage P msg hasOPK A
+  have h₁ := forgeProb_le_sigForge_add_pqpkGuessed_add_forgeHonestGood P msg hasOPK A
+  have h₂ := sigForgeProb_le_sig P msg hasOPK A εsig hverifyDet hsig
+  have h₃ := pqpkGuessedProb_le P msg hasOPK A q hq εpk hpk
+  have h₄ := forgeHonestGoodProb_le P msg hasOPK A q hq εgap εaead εkdf hidKEM hgap haead hkdf
+  have h₅ := indistAdvantage_le P msg hasOPK A q hq εgap εaead εkdf εpk hidKEM hgap haead
+    hkdf hpk
+  have hεaead : (0 : ℝ) ≤ εaead :=
+    le_trans ENNReal.toReal_nonneg (haead ⟨pure ()⟩)
+  have hqa : (0 : ℝ) ≤ (q : ℝ) * εaead := mul_nonneg (Nat.cast_nonneg q) hεaead
+  nlinarith [h₀, h₁, h₂, h₃, h₄, h₅, hqa]
 
 /-- Top-level UAKE security theorem for spec-based PQXDH, making no assumptions
   about the underlying DH key exchange, but assuming the KEM is secure. This

@@ -24,8 +24,10 @@ Deviations from a pure "extracted code as UAKE" statement
 * **Encapsulation totality:** the proofs use the believed-true assumption
   `encapsTotalAll` from `Assumptions.lean`.
 * **Inherited Spec simplifications:** the Spec theorems this reduces to are
-  still sorry'd and carry their own simplifications (SUF-CMA signatures, the
-  KDF as a PRF); see `PQXDH.Spec.UAKE.Security`.
+  still sorry-backed (the PQ theorem directly, the DH theorem through the
+  sorry'd game hops in `PQXDH.Spec.UAKE.SecurityLemmas`) and carry their own
+  simplifications (SUF-CMA signatures, the KDF as a PRF); see
+  `PQXDH.Spec.UAKE.Security`.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -119,7 +121,7 @@ theorem uakeInitiator_secure_dh
     (A : UAKE.Adversary (uakeInitiator P msg hasOPK)) (q : ℕ) (hq : A.OpensAtMost q)
     /- Probabilities bounding the adversary's advantage w/r/t PQXDH's component
       primitives. -/
-    (εsig εddh εaead εkdf : ℝ)
+    (εsig εgap εaead εkdf εpk : ℝ)
     /- We assume the signature scheme has a deterministic verification
       procedure. This holds in general for signature schemes, but VCV-io's
       signature scheme definition leaves it monadic, so this seems to be a
@@ -131,11 +133,15 @@ theorem uakeInitiator_secure_dh
         "no-match" attacks because we use a transcript-matching AKE definition. -/
     (hsig : ∀ B : P.sig.unforgeableAdv,
       (B.strongAdvantage ProbCompRuntime.probComp).toReal ≤ εsig)
-    /- Bound on an adversary's advantage in the DH security game, stated
-      against the extracted key generation and agreement. -/
-    (hddh : ∀ D : DiffieHellman.NominalDDHAdversary ECKey,
-      DiffieHellman.nominalDDHDistAdvantage P.ecKeygen pqxdh.KeyPair.public_key
-        x25519DH D ≤ εddh)
+    /- Bound on an adversary's advantage in the GapDH security game, stated
+      over any field and group structure realizing the clean-group model
+      (the witnesses of `hGroupModel` are not in scope for this hypothesis,
+      so it quantifies over all of them). -/
+    (hgap : ∀ (F : Type) [Field F] [SampleableType F]
+        [AddCommGroup ECKey] [Module F ECKey]
+        (gen : ECKey) (privEnc : F → Bytes 32#usize), ECGroupModel P gen privEnc →
+      ∀ D : DiffieHellman.GapDHAdversary F ECKey,
+        DiffieHellman.gapDHAdvantage gen D ≤ εgap)
     /- Bound on the adversary's advantage forging an AEAD ciphertext. -/
     (haead : ∀ B : AEAD.INT_CTXT_D_Adversary P.aead,
       AEAD.INT_CTXT_D_Advantage P.aead B ≤ εaead)
@@ -149,24 +155,28 @@ theorem uakeInitiator_secure_dh
         with one of these, rather than a random bit string. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × Option ECKey × SS)
         (Key × Key × Key),
-      (kdfPRFDH P).prfAdvantage D ≤ εkdf) :
+      (kdfPRFDH P).prfAdvantage D ≤ εkdf)
+    /- Bound on the probability of guessing the public key output by the
+      extracted KEM's key generation. This bounds KEM public-key collisions
+      and predictions across T-oracle sessions, which otherwise break UAKE
+      security outright; see `PQXDH.Spec.UAKE.SecurityLemmas`. -/
+    (hpk : ∀ pk : PQPK, (Pr[= pk | Prod.fst <$> (pqkem P).keygen]).toReal ≤ εpk) :
     /- Top-level theorem statement: The adversary's advantage in the UAKE game
       is bounded as a polynomial over the adversary bounds of the underlying
       schemes, where the coefficients are small constants and the number q of
       sessions started with its T oracle. -/
-    UAKE.advantage ProbCompRuntime.probComp A ≤ εsig + q * (εddh + εaead + εkdf) := by
+    UAKE.advantage ProbCompRuntime.probComp A ≤
+      εsig + 2 * q * (εgap + 2 * εaead + εkdf) + 3 * (q : ℝ) ^ 2 * εpk := by
   obtain ⟨F, iField, iSamp, iGroup, iMod, gen, privEnc, hM⟩ := hGroupModel
   letI := iField; letI := iSamp; letI := iGroup; letI := iMod
   rw [advantage_toSpec gen privEnc hM encapsTotalAll hkdfTotal A]
   exact _root_.PQXDH.uakeInitiator_secure_dh (specParams P F gen) msg hasOPK hidKEM
     (A.toSpec gen privEnc) q (opensAtMost_toSpec gen privEnc A hq)
-    εsig εddh εaead εkdf hverifyDet hsig
-    (fun D => by
-      have h := hddh (D gen)
-      rw [← ddh_advantage_toSpec gen privEnc hM D] at h
-      exact h)
+    εsig εgap εaead εkdf εpk hverifyDet hsig
+    (hgap F gen privEnc hM)
     haead
     (fun D => by rw [kdfPRFDH_advantage_toSpec gen privEnc hM D]; exact hkdf D)
+    hpk
 
 end
 
