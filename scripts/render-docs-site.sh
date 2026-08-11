@@ -217,7 +217,7 @@ cat > "$site_root/index.html" <<'HTML'
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PQXDH — Lean Formalization</title>
+  <title>LibSignal Documentation and Models</title>
   <style>
     :root {
       color-scheme: light;
@@ -255,6 +255,15 @@ cat > "$site_root/index.html" <<'HTML'
     .chapter-section {
       margin: 26px 0 10px;
       font-size: 1.45rem;
+    }
+    .section-intro {
+      margin: 0 0 16px;
+    }
+    .section-intro p {
+      margin: 0 0 10px;
+    }
+    .section-intro a {
+      color: var(--link);
     }
     .chapter-list {
       display: grid;
@@ -662,8 +671,20 @@ cat > "$site_root/index.html" <<'HTML'
 <body>
   <main>
     <h1>LibSignal Documentation and Models</h1>
-    <p class="subtitle">Formal verification of Signal's PQXDH key-agreement protocol in Lean</p>
+    <p class="subtitle">Formal models and documentation of cryptographic implementations in LibSignal</p>
 HTML
+
+# Landing-page intro for the Models section, mirroring the first three
+# paragraphs of the "PQXDH Models" section of README.md.
+models_section_intro() {
+  cat <<'HTML'
+    <div class="section-intro">
+      <p>Formal verification of Signal's PQXDH key-agreement protocol in Lean 4, built on top of <a href="https://github.com/Verified-zkEVM/VCV-io">VCVio</a>.</p>
+      <p>The goal of this effort was to state (and ideally prove) game-based cryptographic security properties (via security definitions written using VCV-io) directly on models of the LibSignal Rust code, extracted using Aeneas. In order to do this, I first wrote a model of the unilaterally authenticated key exchange security notion from <a href="https://eprint.iacr.org/2017/109.pdf">DF'17</a>. Then I used two Aeneas-extracted code models to instantiate UAKE schemes and state a bound for each on adversarial advantage in the UAKE security game. Our UAKE definition is being considered for upstreaming into VCV-io (PR <a href="https://github.com/Verified-zkEVM/VCVio/pull/476">here</a>).</p>
+      <p>Another goal was to avoid security proofs that are heavily dependent on the specific Rust implementation, so the proofs could be reused for multiple implementations. To this end, I also hand-wrote an implementation of PQXDH based on <a href="https://signal.org/docs/specifications/pqxdh">the spec</a>, along with UAKE correctness and security theorems. (The correctness theorems on the spec have proofs, but the security theorems are currently sorry'd.) Rather than trying to directly prove UAKE security on the extracted implementations, I had Claude use a game-hop to the spec-based implementation. These game hops were relatively easy for Claude to prove automatically, as opposed to the proofs for the spec. Ideally, a change to the code and the corresponding Aeneas-extracted model would only touch these game-hops, making the proofs easily repairable.</p>
+    </div>
+HTML
+}
 
 current_section=""
 for chapter in "${chapters[@]}"; do
@@ -674,7 +695,11 @@ for chapter in "${chapters[@]}"; do
     if [[ -n "$current_section" ]]; then
       printf '    </ul>\n' >> "$site_root/index.html"
     fi
-    printf '    <h2 class="chapter-section">%s</h2>\n    <ul class="chapter-list">\n' "$section" >> "$site_root/index.html"
+    printf '    <h2 class="chapter-section">%s</h2>\n' "$section" >> "$site_root/index.html"
+    if [[ "$section" == "Models" ]]; then
+      models_section_intro >> "$site_root/index.html"
+    fi
+    printf '    <ul class="chapter-list">\n' >> "$site_root/index.html"
     current_section="$section"
   fi
 

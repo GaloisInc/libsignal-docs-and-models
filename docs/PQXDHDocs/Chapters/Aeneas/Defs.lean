@@ -25,7 +25,7 @@ set_option doc.verso true
 The Aeneas-extracted PQXDH realizations and their reduction to the spec model.
 :::
 
-Two Aeneas extractions of PQXDH are modelled, each realizing the Spec UAKE construction: the *simplified* extraction (`PQXDH.Aeneas.Simplified`) instantiates it with the PQXDH demo crate, and the *high-fidelity* extraction (`PQXDH.Aeneas.Full`) with Signal's production `libsignal_protocol` crate.
+Two Aeneas extractions of PQXDH are modelled, each realizing the Spec UAKE construction: the *simplified* extraction (`PQXDH.Aeneas.Simplified`) instantiates it with the PQXDH demo crate, and the *high-fidelity* extraction (`PQXDH.Aeneas.Full`) with Signal's `libsignal_protocol` crate.
 
 # Simplified
 
