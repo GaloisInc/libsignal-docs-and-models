@@ -49,7 +49,7 @@ the ratcheting stage (SPQR/ML-KEM Braid + Double Ratchet); see sections 3.3,
 At the beginning of time, Alice wants to communicate with Bob for the very
 first time but does not have any shared secret with him. This lack of a shared
 secret, and really a first key to ratchet from, defines this very first state.
-In order to agree on a shared secret and the first key that will be in the
+In order to agree on the first key that will be in the
 Double Ratchet chain, as well as the secret material for SPQR, Alice fetches
 one of Bob's pre-key bundles from the Signal server and performs the initial
 handshake (PQXDH) with him. By doing so, Alice
@@ -60,14 +60,14 @@ use for their first messages.
 Note that this initial ratcheting state includes both the first Double Ratchet
 key and state, as well as the secret material necessary to initialize the SPQR
 chain in the code base
-{libsignal57d "rust/protocol/src/ratchet.rs#L48-L64"}[]
+{libsignal57d "rust/protocol/src/ratchet.rs#L48-L64"}[],
 {libsignal57d "rust/protocol/src/ratchet.rs#L77-L107"}[]
 {spqrf258 "src/lib.rs#L210-L234"}[]. Alice's initial SPQR state, described in
 detail in the ML-KEM Braid specification
 {citep Book.Papers.signalMLKEMBraid}[], is set to `KeysUnsampled`
-{spqrf258 "src/lib.rs#L196-L202"}[]
+{spqrf258 "src/lib.rs#L196-L202"}[],
 {spqrf258 "src/v1/chunked/states.rs#L57-L60"}[], while Bob's is set to
 `NoHeaderReceived`
-{spqrf258 "src/lib.rs#L203-L205"}[]
+{spqrf258 "src/lib.rs#L203-L205"}[],
 {spqrf258 "src/v1/chunked/states.rs#L62-L64"}[].
 :::

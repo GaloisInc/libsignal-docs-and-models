@@ -8,66 +8,47 @@ open Verso.Genre Manual
 #doc (Manual) "Triple Ratchet" =>
 
 :::galois
-Following that initial handshake, the Signal protocol then runs the Double
-Ratchet and SPQR protocols in parallel. For every new message a new ratcheting
-key is generated. However, while the Double Ratchet continuously produces new
-fresh keys for each message, SPQR does so after an epoche of time, hence the term "sparse" in SPQR.
-The relevant SPQR state transitions are described in section 2.5 of the
-ML-KEM Braid specification
-{citep Book.Papers.signalMLKEMBraid}[]. Until SPQR constructs
-a new epoch secret, the Triple Ratchet mixes the new Double Ratchet key with
-whatever the pre-existing SPQR key is.
+Following that initial handshake, the Signal protocol then runs the Double Ratchet and the SPQR protocol in parallel. 
+For every new message a new ratcheting key is generated. However, while the Double Ratcheting protocol is continuously 
+producing new keys with each received message, the SPQR protocol only does so after an epoche of time (hence the term sparse in SPQR). 
+Meaning that until SPQR constructs a new epoch secret, the Triple Ratchet mixes the new Double Ratchet key with
+whatever the pre-existing SPQR key is. 
+
+This transition from old SPQR key to new SPQR key is reflected in the state transitions described in sections 2.1 and 2.5 of the
+ML-KEM Braid specification {citep Book.Papers.signalMLKEMBraid}[]. Assuming that Alice is initiating a conversation with Bob, then:
 :::
 
 # {galois}[Alice's side]
 
 :::galois
 On Alice's side
-{libsignal57d "rust/protocol/src/triple_ratchet.rs#L93-L132"}[], the code
+{libsignal57d "rust/protocol/src/triple_ratchet.rs#L86-L135"}[], the code
 itself:
 
-* Identifies whether the current SPQR state emits a fresh epoch secret
-  {spqrf258 "src/lib.rs#L263-L299"}[]
-  {spqrf258 "src/v1/chunked/states.rs#L115-L273"}[]. Only the
-  `HeaderReceived` send transition emits one
-  {spqrf258 "src/v1/chunked/states.rs#L203-L219"}[].
-* Based on the current state, it may add a fresh SPQR epoch secret for use with
-  the next round of messages {spqrf258 "src/lib.rs#L294-L297"}[].
-* Uses what the source calls the "pre-existing SPQR key" in each round
-  {spqrf258 "src/lib.rs#L298"}[].
-* Note: Since Alice is the initiator of the conversation, they need to indicate to Bob
-  that they have moved on to next epoch before both parties start using the negotiated
-  SPQR shared secret. At a code level, this is reflected on line {spqrf258 "src/lib.rs#L298"}[]
-  where Alice saves the new epoch secret for the next round of messages. At a state transition level, 
-  this is marked by Alice switching from the EkSentCt1Received state to the NoHeaderReceived state 
-  (where Alice effectively switches roles with Bob), and Bob switching from Ct2Sampled to KeysUnsampled.
-* Then mixes the two ratcheting keys using HKDF based on SHA-256
-  {libsignal57d "rust/protocol/src/triple_ratchet.rs#L104"}[]
-  {libsignal57d "rust/protocol/src/ratchet/keys.rs#L28-L44"}[]
-  {libsignal57d "rust/protocol/src/ratchet/keys.rs#L99-L118"}[] and finally
-  updates the SPQR state
-  {libsignal57d "rust/protocol/src/triple_ratchet.rs#L131-L132"}[]
-  {spqrf258 "src/lib.rs#L303-L313"}[].
+* Alice uses the key associated with the current epoch (i.e. not the one being negotiated, but rather the one already agreed upon) {spqrf258 "/src/lib.rs#L298"}[]
+* If Alice has finished constructing the next epoch’s shared secret, they can add it to the chain of epoch secrets so that it may be 
+used with the next round of messages {spqrf258 "src/lib.rs#L295-L297"}[]. Notice that under the hood, the SPQR shared secret is transformed into an SPQR message key 
+before being added to the chain {spqrf258 "src/chain.rs#L357-L362"}[].
+* Alice only emits and uses a fresh constructed epoch secret and key when they switch states from EkSentCt1Received state to the NoHeaderReceived state, 
+reflected here {spqrf258 "src/v1/unchunked/send_ek.rs#L150"}[] in the code. 
+* Alice finally mixes the SPQR and Double ratcheting keys using an HKDF based on SHA256 {libsignal57d "rust/protocol/src/triple_ratchet.rs#L104"}[]
+{libsignal57d "rust/protocol/src/ratchet/keys.rs#L32-L44"}[], {libsignal57d "rust/protocol/src/ratchet/keys.rs#L100-L118"}[]
+and updates the SPQR state {libsignal57d "rust/protocol/src/triple_ratchet.rs#L132"}[], {spqrf258 "src/lib.rs#L307-L313"}[], {spqrf258 "src/v1/chunked/states.rs#L115-L273"}[].
 :::
 
 # {galois}[Bob's side]
 
 :::galois
 Similarly, on Bob's side:
-
+{libsignal57d "rust/protocol/src/triple_ratchet.rs#L215-L297"}[]
 * Bob retrieves all the Double Ratchet key material
   {libsignal57d "rust/protocol/src/triple_ratchet.rs#L224-L236"}[].
-* For SPQR
-  {libsignal57d "rust/protocol/src/triple_ratchet.rs#L238-L251"}[], the code
-  identifies whether the current state emits a fresh epoch secret
-  {spqrf258 "src/lib.rs#L421-L429"}[]
-  {spqrf258 "src/v1/chunked/states.rs#L275-L533"}[]. Completing the
-  `EkSentCt1Received` receive transition emits one
-  {spqrf258 "src/v1/chunked/states.rs#L350-L369"}[].
-* It either adds the fresh SPQR epoch secret
-  {spqrf258 "src/lib.rs#L427-L429"}[] or uses what the source calls the
-  "pre-existing SPQR key" if both parties have not finished negotiating the fresh SPQR secret.
-* It then mixes the two ratcheting keys using HKDF based on SHA-256
-  {libsignal57d "rust/protocol/src/triple_ratchet.rs#L253-L254"}[] and finally
-  updates the SPQR state {spqrf258 "src/lib.rs#L436-L443"}[].
+* Bob then identifies the key {libsignal57d "rust/protocol/src/triple_ratchet.rs#L239-L251"}[] that should be used by inspecting the SPQR state and 
+  Bob either updates the SPQR key {spqrf258 "src/lib.rs#L427-L429"}[] or uses the pre-existing SPQR key {spqrf258 "src/lib.rs#L432-L434"}[]
+  (note here how the index of the chain key here is not decremented) depending on the epoch 
+  that the parties have finished negotiating.
+* Bob only constructs the new epoch shared secret when they reach the HeaderReceived state {spqrf258 "src/v1/unchunked/send_ct.rs#L135-L147"}[] and switch to the 
+  Ct1Sampled state. Note that this secret is turned into a key when its added to the SPQR chain {spqrf258 "src/lib.rs#L427-L429"}[].
+* Bob finally mixes the two ratcheting keys using an HKDF based on SHA256 {libsignal57d "rust/protocol/src/triple_ratchet.rs#L254"}[] and updates the SPQR state {spqrf258 "src/lib.rs#L437-L443"}[].
 :::
+

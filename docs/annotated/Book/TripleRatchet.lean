@@ -2,6 +2,7 @@ import VersoManual
 import Book.Annotation
 import Book.TripleRatchet.Overview
 import Book.TripleRatchet.Protocol
+import Book.TripleRatchet.Keys
 import Book.TripleRatchet.Security
 
 open Verso.Genre Manual
@@ -24,6 +25,8 @@ that describe them.
 {include 1 Book.TripleRatchet.Overview}
 
 {include 1 Book.TripleRatchet.Protocol}
+
+{include 1 Book.TripleRatchet.Keys}
 
 {include 1 Book.TripleRatchet.Security}
 

@@ -9,6 +9,7 @@ Two parallel commentary channels, each with three flavors:
                           commentary; visually offset without disturbing the spec
                           prose flow.
   * `:::galois`         — block-level annotation for paragraphs, code, multi-block
+
 -/
 
 import Verso
@@ -41,51 +42,64 @@ def annotationCss := r#"
   color: #a6105e; margin-bottom: 0.25rem; content: "Galois";
 }
 
-.annotation-galois-block > p:first-of-type,
-.annotation-galois-block > :last-child,
+.annotation-galois-block > p:first-of-type { margin-top: 0; }
+.annotation-galois-block > :last-child { margin-bottom: 0; }
 
 /* ──── Sidenotes (margin notes) ──── */
-body { counter-reset: galois-note; }
+body { counter-reset: galois-note ; }
 
-.annotation-galois-note,
+.annotation-galois-note { position: relative; }
 
 .annotation-galois-note { counter-increment: galois-note; }
 
 .annotation-galois-note::after {
   content: counter(galois-note);
-  color: #a6105e;
+  color:hsl(220, 82.40%, 35.70%);
   font-size: 0.7em; font-weight: 700;
   vertical-align: super; margin: 0 0.1em;
 }
-
-.annotation-galois-note > .note,
-
 .annotation-galois-note > .note {
-  background: #fdf2f8; border-left: 3px solid #a6105e; color: #5b1339;
+  position: relative;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9em;
+  font-style: italic;
+  border-radius: 2px;
+}
+.annotation-galois-note > .note {
+  background: #fdf2f8; border-left: 3px solid hsl(220, 82.40%, 35.70%); color:rgb(19, 30, 91);
 }
 .annotation-galois-note > .note::before {
   content: "G" counter(galois-note);
   display: block; font-style: normal; font-weight: 600;
   font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase;
-  color: #a6105e; margin-bottom: 0.2rem;
+  color:hsl(220, 82.40%, 35.70%); margin-bottom: 0.2rem;
 }
 /* Wide viewport: float note into the right margin */
 @media screen and (min-width: 1400px) {
-  .annotation-galois-note > .note,
+  .annotation-galois-note > .note{
+    float: right; clear: right;
+    margin-right: -17rem; width: 14rem; margin-top: 0;
+  }
 }
 
 /* Medium viewport */
 @media screen and (max-width: 1400px) and (min-width: 701px) {
-  .annotation-galois-note > .note,
+  .annotation-galois-note > .note{
+    float: right; clear: right;
+    width: 38%; margin: 0.5rem 0 0.5rem 1rem;
+  }
 }
 
 /* Narrow viewport (phone): inline below */
 @media screen and (max-width: 700px) {
-  .annotation-galois-note > .note,
+  .annotation-galois-note > .note{
+    display: block; width: 100%; margin: 0.5rem 0;
+    float: none; clear: none;
+  }
 }
 
 /* Hover affordance */
-.annotation-galois-note:hover > .note { background: #fce7f3; }
+.annotation-galois-note:hover > .note { background:rgb(207, 228, 249); }
 "#
 
 open Verso.Output Html in
