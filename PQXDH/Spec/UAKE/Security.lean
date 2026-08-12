@@ -50,6 +50,10 @@ Model simplifications
   PQXDH in practice. The way to fix this would be to use a dedicated HNDL
   security notion here, rather than UAKE, and omit the hypothesis that the
   signature scheme is secure.
+* **KDF modeled as a PRF in non-PQ security:** We currently model the KDF as a
+  PRF in both the PQ and non-PQ security theorems. The previous CryptoVerif
+  analysis uses a random oracle to model the KDF in the non-PQ case, so it may
+  be necessary for us to do this as well in order to complete the proof.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -96,7 +100,10 @@ theorem uakeInitiator_secure_dh
       a PRF.
       * MODEL SIMPLIFICATION: We model the KDF as a PRF. Since we key our KDF
         using DH group elements, we must also assume that the KDF is secure
-        when keyed with one of these, rather than a random bit string. -/
+        when keyed with one of these, rather than a random bit string.
+      * NOTE: It may be necessary to model this as a random oracle, instead of
+        a PRF, in order to complete the proof. The previous CryptoVerif
+        analysis uses a RO here. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (G × G × Option G × SS) (K × K × K),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf)
     /- Bound on the probability of guessing the public key output by the KEM's

@@ -28,7 +28,11 @@ Deviations from a pure "extracted code as UAKE" statement
   the KDF as a PRF); see `PQXDH.Spec.UAKE.Security`. In particular, the PQ
   theorem inherits the modeling of PQ security as "UAKE security with
   compromised DH key exchange," which assumes a PQ-secure signature scheme;
-  see the "PQ security as UAKE with PQ signature" bullet there.
+  see the "PQ security as UAKE with PQ signature" bullet there. The
+  KDF-as-a-PRF modeling may also change: the previous CryptoVerif analysis
+  models the KDF as a random oracle in the non-PQ case, and completing the
+  Spec proofs may require the same; see the "KDF modeled as a PRF in non-PQ
+  security" bullet there.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -164,7 +168,10 @@ theorem uakeInitiator_secure_dh
       a PRF.
       * MODEL SIMPLIFICATION: We model the KDF as a PRF. Since we key our KDF
         using DH values, we must also assume that the KDF is secure when keyed
-        with one of these, rather than a random bit string. -/
+        with one of these, rather than a random bit string.
+      * NOTE: It may be necessary to model this as a random oracle instead of
+        a PRF; see the NOTE on the `hkdf` hypothesis of
+        `PQXDH.uakeInitiator_secure_dh` in `PQXDH.Spec.UAKE.Security`. -/
     (hkdf : ∀ D : PRFScheme.PRFAdversary (ECKey × ECKey × Option ECKey × SS)
         (Key × Key × Key),
       (kdfPRFDH P).prfAdvantage D ≤ εkdf)
