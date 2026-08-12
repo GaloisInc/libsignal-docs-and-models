@@ -129,7 +129,7 @@ UAKE security of the extracted scheme is proved by reduction to the Spec theorem
 - **Clean-group model.** Both theorems assume some clean-group model for the opaque X25519 primitives (the `hGroupModel` hypothesis). This is a model idealization, not a believed-true fact.
 - **KDF totality.** The `hkdfTotal` hypothesis assumes the extracted KDF never fails.
 - **Encapsulation totality.** The proofs use the believed-true assumption `encapsTotalAll`.
-- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
+- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter. In particular, the PQ theorem inherits the modeling of PQ security as "UAKE security with compromised DH key exchange," which assumes a PQ-secure signature scheme; see the "PQ security as UAKE with PQ signature" bullet there.
 
 :::defTitle "aeneas_simplified_security_defs" "Group model for the simplified extraction"
 :::
@@ -328,7 +328,7 @@ UAKE security of the extracted scheme is proved by reduction to the Spec theorem
 - **Clean-group model.** Both theorems assume some clean-group model for the opaque curve25519 primitives (the `hGroupModel` hypothesis). This is a model idealization, not a believed-true fact.
 - **KEM pairing.** The `hK` hypothesis assumes the KEM key generator is the paired form of the extracted KEM's key generation.
 - **Totality hypotheses.** `hencTotal` assumes the extracted encapsulation never fails, and `hkdfTotal` assumes the extracted KDF never fails.
-- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter.
+- **Inherited Spec simplifications.** The Spec theorems this reduces to are still sorry-backed and carry their own simplifications (SUF-CMA signatures, the KDF as a PRF); see the Specification chapter. In particular, the PQ theorem inherits the modeling of PQ security as "UAKE security with compromised DH key exchange," which assumes a PQ-secure signature scheme; see the "PQ security as UAKE with PQ signature" bullet there.
 
 :::defTitle "aeneas_full_security_defs" "Group and KEM models for the high-fidelity extraction"
 :::

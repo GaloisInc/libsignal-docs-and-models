@@ -25,7 +25,10 @@ Deviations from a pure "extracted code as UAKE" statement
   `encapsTotalAll` from `Assumptions.lean`.
 * **Inherited Spec simplifications:** the Spec theorems this reduces to are
   still sorry-backed and carry their own simplifications (SUF-CMA signatures,
-  the KDF as a PRF); see `PQXDH.Spec.UAKE.Security`.
+  the KDF as a PRF); see `PQXDH.Spec.UAKE.Security`. In particular, the PQ
+  theorem inherits the modeling of PQ security as "UAKE security with
+  compromised DH key exchange," which assumes a PQ-secure signature scheme;
+  see the "PQ security as UAKE with PQ signature" bullet there.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -38,7 +41,12 @@ variable {SPK SSK S C Msg IdC IdK : Type}
 
 /-- Top-level UAKE security theorem for the simplified extraction, making no
   assumptions about the underlying DH key exchange, but assuming the KEM is
-  secure. This models UAKE security in the PQ setting. -/
+  secure. This models UAKE security in the PQ setting.
+  * MODEL GAP: We model PQ security as "UAKE security with compromised DH key
+    exchange," which is not the HNDL resistance PQXDH actually targets in the
+    PQ setting and requires assuming a PQ-secure signature scheme. See the
+    MODEL GAP caveat on `PQXDH.uakeInitiator_secure_pq` in
+    `PQXDH.Spec.UAKE.Security` for details. -/
 theorem uakeInitiator_secure_pq
     [DecidableEq S] [DecidableEq C] [DecidableEq Msg] [DecidableEq IdC] [DecidableEq IdK]
     [Inhabited S] [Inhabited SSK]

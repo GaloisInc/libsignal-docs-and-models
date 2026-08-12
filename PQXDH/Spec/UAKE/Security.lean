@@ -38,6 +38,18 @@ Model simplifications
   requirement that "collisions are unlikely". Modeling the maps as collision
   resistant would be an improvement, since it would allow a hash of the key to
   be used, but we leave that as a future improvement.
+* **PQ security as UAKE with PQ signature:** We model PQ security as "UAKE
+  security with compromised DH key exchange." This allows us to reuse our UAKE
+  notion, but it's not quite the desired statement of security. In a PQ
+  setting, PQXDH is intended to be resistant to harvest-now-decrypt-later
+  (HNDL) attacks, *not* a general authenticated key exchange notion. The
+  difference is that, although key secrecy should be maintained, authenticity
+  doesn't need to be. However, UAKE doesn't allow us to argue about key secrecy
+  in isolation. Moreover, in order to show the authenticity part of UAKE, we
+  must assume that the signature scheme is PQ secure, which is not the case for
+  PQXDH in practice. The way to fix this would be to use a dedicated HNDL
+  security notion here, rather than UAKE, and omit the hypothesis that the
+  signature scheme is secure.
 -/
 
 open OracleSpec OracleComp AKE AKE.UAKE
@@ -112,7 +124,19 @@ theorem uakeInitiator_secure_dh
 
 /-- Top-level UAKE security theorem for spec-based PQXDH, making no assumptions
   about the underlying DH key exchange, but assuming the KEM is secure. This
-  models UAKE security in the PQ setting. -/
+  models UAKE security in the PQ setting.
+  * MODEL GAP: We model PQ security here as "UAKE security with compromised DH
+    key exchange." This allows us to reuse our UAKE notion, but it's not quite
+    the desired statement of security. In a PQ setting, PQXDH is intended to be
+    resistant to harvest-now-decrypt-later (HNDL) attacks, *not* a general
+    authenticated key exchange notion. The difference is that, although key
+    secrecy should be maintained, authenticity doesn't need to be. However,
+    UAKE doesn't allow us to argue about key secrecy in isolation. Moreover, in
+    order to show the authenticity part of UAKE, we must assume that the
+    signature scheme is PQ secure, which is not the case for PQXDH in practice.
+    The way to fix this would be to use a dedicated HNDL security notion here,
+    rather than UAKE, and omit the hypothesis that the signature scheme is
+    secure. -/
 theorem uakeInitiator_secure_pq
     [Field F] [AddCommGroup G] [Module F G] [SampleableType F]
     [SampleableType K] [Fintype K] [Inhabited K] [SampleableType SS] [DecidableEq SS]
