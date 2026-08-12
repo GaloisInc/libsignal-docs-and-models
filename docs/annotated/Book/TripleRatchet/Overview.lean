@@ -1,6 +1,7 @@
 import VersoManual
 import Book.Annotation
 import Book.CodeRef
+import Book.Figure
 import Book.Papers
 
 open Verso.Genre Manual
@@ -37,6 +38,16 @@ shared secret, and how the next SPQR shared secret is constructed between epochs
 In what follows, we focus on the transition of this state machine between the
 different sub-protocols of the overall Signal protocol: i.e. PQXDH, Double
 Ratchet, and SPQR/ML-KEM Braid.
+:::
+
+:::figure
+![Triple Ratchet](../../static/triple-ratchet.png)
+
+Diagram showing the interaction between PQXDH, the Triple Ratchet protocol and
+the various components of the Triple Ratchet. What we call "Vulnerable Message
+Key" in this figure, refers to the message keys associated with the vulnerable
+set in the ML-KEM Braid specs. These are only vulnerable against a quantum
+adversary, and are safe against a regular one.
 :::
 
 # {galois}[PQXDH → Triple Ratchet]
