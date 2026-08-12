@@ -41,7 +41,7 @@ Ratchet, and SPQR/ML-KEM Braid.
 :::
 
 :::figure
-![Triple Ratchet](../../static/triple-ratchet.png)
+![Triple Ratchet](static/triple-ratchet.png)
 
 Diagram showing the interaction between PQXDH, the Triple Ratchet protocol and
 the various components of the Triple Ratchet. What we call "Vulnerable Message
