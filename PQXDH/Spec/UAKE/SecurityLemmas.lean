@@ -40,10 +40,12 @@ theorem):
   `indistAdvantage_le_pq` in `PQHops.lean`): the indistinguishability
   cores.
 
-The games and event predicates live in `SecurityLemmas/Games.lean`. The
-GapDH cores idealize the KDF outputs on the challenge session's key
-material, which requires the KDF to be a programmable random oracle, so
-their proofs are deferred to that planned model change. The IND-CCA cores
+The games and event predicates live in `SecurityLemmas/Games.lean`. Hops 1
+and 2 are proven; they are purely probabilistic. Hops 3 and 4 are deferred
+as reduction work, with the intended reductions recorded in their doc
+comments. The GapDH cores idealize the KDF outputs on the challenge
+session's key material, which requires the KDF to be a programmable random
+oracle, so their proofs are deferred to that planned model change. The IND-CCA cores
 are expressible in the current model (the KDF's PRF key slot is the KEM
 shared secret, which the IND-CCA hop makes uniform) and are deferred as
 future reduction work. The well-formedness lemmas in

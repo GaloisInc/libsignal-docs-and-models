@@ -421,10 +421,13 @@ Hops 1 through 4 of the security proofs, used by both the DH and the PQ security
 
 ::::theorem "spec_lemma_advantage_le_forgeProb_add_indistAdvantage" (parent := "spec_lemmas") (lean := "PQXDH.advantage_le_forgeProb_add_indistAdvantage")
 Hop 1: `UAKE.Exp` and `indistExp` agree except on the forgery branch,
-where the former returns `true` and the latter flips a fair coin, so their
-output distributions differ by at most (half) the forgery probability, and
-the UAKE advantage is bounded by `forgeProb` plus `indistAdvantage`.
-Purely probabilistic; uses no cryptographic hypotheses.
+where the former returns `true` and the latter flips a fair coin. After
+commuting the challenge bit ahead of the challenge phase, the two
+experiments share their sampling prefix, so `UAKE.Exp`'s success
+probability lies between `indistExp`'s and `indistExp`'s plus the forgery
+probability, and the triangle inequality bounds the UAKE advantage by
+`forgeProb` plus `indistAdvantage`. Purely probabilistic; uses no
+cryptographic hypotheses.
 
 {usesLabel}`uses` {uses "spec_lemma_forgeProb"}[] · {uses "spec_lemma_indistAdvantage"}[] · {uses "uake_exp"}[]
 ::::

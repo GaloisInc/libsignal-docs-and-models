@@ -27,7 +27,6 @@ theorem uakeInitiator_wellFormed
     [DecidableEq G] [DecidableEq IdC] [DecidableEq IdK]
     [DecidableEq SS] [DecidableEq Msg] [SampleableType K]
     (P : Parameters F G SS PQPK PQSK CT SPK SSK S C Msg K IdC IdK) (msg : Msg) (hasOPK : Bool)
-
     (hsig : P.sig.PerfectlyComplete ProbCompRuntime.probComp)
     (hkem : P.pqkem.PerfectlyCorrect ProbCompRuntime.probComp)
     (haead : AEAD.PerfectlyCorrect P.aead) :
